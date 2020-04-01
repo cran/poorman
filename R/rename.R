@@ -1,0 +1,24 @@
+#' @examples
+#' rename(mtcars, MilesPerGallon = mpg)
+#' rename(mtcars, Cylinders = cyl, Gears = gear)
+#' mtcars %>% rename(MilesPerGallon = mpg)
+#'
+#' @rdname select
+#' @export
+rename <- function(.data, ...) {
+  check_is_dataframe(.data)
+  new_names <- names(deparse_dots(...))
+  if (length(new_names) == 0L) {
+    warning("You didn't give any new names")
+    return(.data)
+  }
+  col_pos <- select_positions(.data, ...)
+  old_names <- colnames(.data)[col_pos]
+  new_names_zero <- nchar(new_names) == 0L
+  if (any(new_names_zero)) {
+    warning("You didn't provide new names for: ", paste0("`", old_names[new_names_zero], collapse = ", "), "`")
+    new_names[new_names_zero] <- old_names[new_names_zero]
+  }
+  colnames(.data)[col_pos] <- new_names
+  .data
+}
