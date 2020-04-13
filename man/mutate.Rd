@@ -13,7 +13,7 @@ transmute(.data, ...)
 \item{.data}{A \code{data.frame}.}
 
 \item{...}{Name-value pairs of expressions, each with length \code{1L}. The name of each argument will be the name of a
-new column and the value will be its corresponding value. Use a \code{NULL} value in ‘mutate’ to drop a variable. New
+new column and the value will be its corresponding value. Use a \code{NULL} value in \code{mutate} to drop a variable. New
 variables overwrite existing variables of the same name.}
 }
 \description{
@@ -25,7 +25,22 @@ mutate(mtcars, mpg2 = mpg * 2)
 mtcars \%>\% mutate(mpg2 = mpg * 2)
 mtcars \%>\% mutate(mpg2 = mpg * 2, cyl2 = cyl * 2)
 
-transmute(mtcars, mpg2 = mpg * 2)
-mtcars \%>\% transmute(mpg2 = mpg * 2, cyl2 = cyl * 2)
+# Newly created variables are available immediately
+mtcars \%>\% mutate(mpg2 = mpg * 2, mpg4 = mpg2 * 2)
+
+# You can also use mutate() to remove variables and modify existing variables
+mtcars \%>\% mutate(
+  mpg = NULL,
+  disp = disp * 0.0163871 # convert to litres
+)
+
+# mutate() vs transmute --------------------------
+# mutate() keeps all existing variables
+mtcars \%>\%
+  mutate(displ_l = disp / 61.0237)
+
+# transmute keeps only the variables you create
+mtcars \%>\%
+  transmute(displ_l = disp / 61.0237)
 
 }
