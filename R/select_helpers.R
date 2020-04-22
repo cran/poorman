@@ -12,14 +12,15 @@
 #' @noRd
 select_positions <- function(.data, ..., group_pos = FALSE) {
   data_names <- colnames(.data)
-  select_env$col_names <- data_names
+  select_env$.col_names <- data_names
+  on.exit(rm(list = ".col_names", envir = select_env))
   cols <- deparse_dots(...)
   cols <- unlist(lapply(
     cols,
-    function(x) if (x %in% data_names) x else eval(parse(text = x))
+    function(x) if (x %in% data_names) x else eval(str2lang(x))
   ))
   if (isTRUE(group_pos)) {
-    groups <- group_vars(.data)
+    groups <- get_groups(.data)
     missing_groups <- !(groups %in% cols)
     if (any(missing_groups)) {
       message("Adding missing grouping variables: `", paste(groups[missing_groups], collapse = "`, `"), "`")
@@ -173,10 +174,4 @@ last_col <- function(offset = 0L, vars = peek_vars()) {
   } else {
     n - offset
   }
-}
-
-select_env <- new.env()
-
-peek_vars <- function() {
-  get("col_names", envir = select_env)
 }
