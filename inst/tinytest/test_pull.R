@@ -6,7 +6,13 @@ expect_error(
 expect_equal(
   mtcars %>% pull(mpg),
   mtcars[, "mpg"],
-  info = "Test pulling a single column"
+  info = "Test pulling a single nse column"
+)
+
+expect_equal(
+  mtcars %>% pull("mpg"),
+  mtcars[, "mpg"],
+  info = "Test pulling a single quoted column"
 )
 
 expect_equal(
@@ -31,4 +37,13 @@ expect_equal(
   mtcars %>% pull(-1),
   mtcars[, "carb"],
   info = "Test pulling a single column with a negative numeric"
+)
+
+expect_equal(
+  {
+    var <- "mpg"
+    mtcars %>% pull(var)
+  },
+  mtcars[, "mpg"],
+  info = "Can pull using a variable"
 )

@@ -19,10 +19,12 @@ transmute <- function(.data, ...) {
 transmute.default <- function(.data, ...) {
   conditions <- deparse_dots(...)
   mutated <- mutate(.data, ...)
-  extract(mutated, names(conditions))
+  mutated[, names(conditions), drop = FALSE]
 }
 
 #' @export
 transmute.grouped_data <- function(.data, ...) {
-  apply_grouped_function(.data, "transmute", ...)
+  rows <- rownames(.data)
+  res <- apply_grouped_function(.data, "transmute", ...)
+  res[rows, ]
 }

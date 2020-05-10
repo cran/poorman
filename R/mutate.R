@@ -32,17 +32,26 @@ mutate <- function(.data, ...) {
 #' @export
 mutate.default <- function(.data, ...) {
   conditions <- deparse_dots(...)
+  cond_names <- names(conditions)
+  unnamed <- which(nchar(cond_names) == 0L)
+  if (is.null(cond_names)) {
+    names(conditions) <- conditions
+  } else if (length(unnamed) > 0L) {
+    names(conditions)[unnamed] <- conditions[unnamed]
+  }
   not_matched <- names(conditions)[!names(conditions) %in% names(.data)]
   .data[, not_matched] <- NA
   context$.data <- .data
   on.exit(rm(.data, envir = context))
   for (i in seq_along(conditions)) {
-    .data[, names(conditions)[i]] <- with(.data, eval(parse(text = conditions[i])))
+    .data[, names(conditions)[i]] <- do.call(with, list(.data, str2lang(unname(conditions)[i])))
   }
   .data
 }
 
 #' @export
 mutate.grouped_data <- function(.data, ...) {
-  apply_grouped_function(.data, "mutate", ...)
+  rows <- rownames(.data)
+  res <- apply_grouped_function(.data, "mutate", ...)
+  res[rows, ]
 }

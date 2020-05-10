@@ -16,10 +16,10 @@
 #' @return A `data.frame`.
 #'
 #' @examples
-#' select(mtcars, mpg, cyl)
+#' select(mtcars, mpg:cyl)
 #' select(mtcars, MilesPerGallon = mpg, Cylinders = cyl)
 #' mtcars %>% select(mpg)
-#' mtcars %>% select(mpg, cyl)
+#' mtcars %>% select(!mpg, !cyl)
 #' iris %>% select(contains("Petal"))
 #'
 #' df <- as.data.frame(matrix(runif(100), nrow = 10))
@@ -36,7 +36,7 @@ NULL
 select <- function(.data, ...) {
   map <- names(deparse_dots(...))
   col_pos <- select_positions(.data, ..., group_pos = TRUE)
-  res <- extract(.data, , col_pos, drop = FALSE)
+  res <- .data[, col_pos, drop = FALSE]
   to_map <- nchar(map) > 0L
   colnames(res)[to_map] <- map[to_map]
   if (has_groups(.data)) res <- set_groups(res, get_groups(.data))

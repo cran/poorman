@@ -33,10 +33,12 @@ filter.default <- function(.data, ...) {
   conditions <- paste(deparse_dots(...), collapse = " & ")
   context$.data <- .data
   on.exit(rm(.data, envir = context))
-  extract(.data, with(.data, eval(parse(text = conditions))), )
+  .data[do.call(with, list(.data, str2lang(unname(conditions)))), ]
 }
 
 #' @export
 filter.grouped_data <- function(.data, ...) {
-  apply_grouped_function(.data, "filter", ...)
+  rows <- rownames(.data)
+  res <- apply_grouped_function(.data, "filter", ...)
+  res[rows[rows %in% rownames(res)], ]
 }
