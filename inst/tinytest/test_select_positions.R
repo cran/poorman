@@ -42,14 +42,33 @@ expect_equal(
   mtcars[, "mpg", drop = FALSE],
   info = "Selecting by symbol works"
 )
-# expect_equal(
-#   {
-#     var <- "mpg"
-#     mtcars %>% select(var)
-#   },
-#   mtcars[, "mpg", drop = FALSE],
-#   info = "Selecting by a variable works"
-# )
+expect_equal(
+  {
+    data <- data.frame(a = 1, b = 2)
+    val <- "a"
+    data %>% select(val)
+  },
+  data.frame(a = 1),
+  info = "Selecting by a variable works"
+)
+expect_equal(
+  {
+    data <- data.frame(a = 1, b = 2, c = 3, d = 4)
+    val <- c("a", "c")
+    data %>% select(val)
+  },
+  data.frame(a = 1, c = 3),
+  info = "Selecting by a vector variable works"
+)
+expect_equal(
+  {
+    data <- data.frame(a = 1, b = 2)
+    a <- "b"
+    data %>% select(a)
+  },
+  data.frame(a = 1),
+  info = "Selecting by a variable uses the execution environment"
+)
 
 # Expression
 expect_equal(
@@ -198,4 +217,9 @@ expect_equal(
   mtcars %>% select(1L, 2, "disp", "hp", starts_with("dr"), wt:qsec),
   mtcars[, c("mpg", "cyl", "disp", "hp", "drat", "wt", "qsec")],
   info = "Test selecting with a mixture of selection options"
+)
+
+expect_error(
+  mtcars %>% select(100),
+  info = "Out of range columns error"
 )

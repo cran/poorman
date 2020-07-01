@@ -21,11 +21,13 @@ arrange <- function(.data, ...) {
 
 #' @export
 arrange.default <- function(.data, ...) {
-  rows <- eval.parent(substitute(with(.data, order(...))))
+  context$setup(.data)
+  on.exit(context$clean(), add = TRUE)
+  rows <- eval(substitute(order(...)), envir = context$.data)
   .data[rows, , drop = FALSE]
 }
 
 #' @export
 arrange.grouped_data <- function(.data, ...) {
-  apply_grouped_function(.data, "arrange", ...)
+  apply_grouped_function("arrange", .data, drop = TRUE, ...)
 }

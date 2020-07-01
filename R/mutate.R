@@ -31,27 +31,19 @@ mutate <- function(.data, ...) {
 
 #' @export
 mutate.default <- function(.data, ...) {
-  conditions <- deparse_dots(...)
-  cond_names <- names(conditions)
-  unnamed <- which(nchar(cond_names) == 0L)
-  if (is.null(cond_names)) {
-    names(conditions) <- conditions
-  } else if (length(unnamed) > 0L) {
-    names(conditions)[unnamed] <- conditions[unnamed]
-  }
-  not_matched <- names(conditions)[!names(conditions) %in% names(.data)]
-  .data[, not_matched] <- NA
-  context$.data <- .data
-  on.exit(rm(.data, envir = context))
+  conditions <- dotdotdot(..., .impute_names = TRUE)
+  .data[, setdiff(names(conditions), names(.data))] <- NA
+  context$setup(.data)
+  on.exit(context$clean(), add = TRUE)
   for (i in seq_along(conditions)) {
-    .data[, names(conditions)[i]] <- do.call(with, list(.data, str2lang(unname(conditions)[i])))
+    context$.data[, names(conditions)[i]] <- eval(conditions[[i]], envir = context$.data)
   }
-  .data
+  context$.data
 }
 
 #' @export
 mutate.grouped_data <- function(.data, ...) {
   rows <- rownames(.data)
-  res <- apply_grouped_function(.data, "mutate", ...)
+  res <- apply_grouped_function("mutate", .data, drop = TRUE, ...)
   res[rows, ]
 }

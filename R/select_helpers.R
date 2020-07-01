@@ -16,7 +16,7 @@
 #' `select()`, these are automatically set to the names of the table.
 #'
 #' @seealso
-#' [select()], [relocate()]
+#' [select()], [relocate()], [where()]
 #'
 #' @return
 #' An integer vector giving the position of the matched variables.
@@ -140,4 +140,16 @@ last_col <- function(offset = 0L, vars = peek_vars()) {
   } else {
     n - offset
   }
+}
+
+#' Peek at variables in the selection context
+#'
+#' Return the vector of column names of the data currently available for selection.
+#'
+#' @return
+#' A vector of column names.
+#'
+#' @export
+peek_vars <- function() {
+  select_env$get_colnames()
 }

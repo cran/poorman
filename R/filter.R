@@ -30,15 +30,25 @@ filter <- function(.data, ...) {
 
 #' @export
 filter.default <- function(.data, ...) {
-  conditions <- paste(deparse_dots(...), collapse = " & ")
-  context$.data <- .data
-  on.exit(rm(.data, envir = context))
-  .data[do.call(with, list(.data, str2lang(unname(conditions)))), ]
+  conditions <- dotdotdot(...)
+  cond_class <- vapply(conditions, typeof, NA_character_)
+  if (any(cond_class != "language")) stop("Conditions must be logical vectors")
+  context$setup(.data)
+  on.exit(context$clean(), add = TRUE)
+  eval_env$env <- parent.frame()
+  on.exit(rm(list = "env", envir = eval_env), add = TRUE)
+  rows <- lapply(
+    conditions,
+    function(cond, frame) eval(cond, context$.data, frame),
+    frame = eval_env$env
+  )
+  rows <- Reduce("&", rows)
+  .data[rows & !is.na(rows), ]
 }
 
 #' @export
 filter.grouped_data <- function(.data, ...) {
   rows <- rownames(.data)
-  res <- apply_grouped_function(.data, "filter", ...)
+  res <- apply_grouped_function("filter", .data, drop = TRUE, ...)
   res[rows[rows %in% rownames(res)], ]
 }
