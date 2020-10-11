@@ -1,11 +1,21 @@
 #' Rename columns
 #'
 #' `rename()` changes the names of individual variables using `new_name = old_name` syntax.
+#' `rename_with()` renames columns using a function.
 #'
 #' @param .data A `data.frame`
-#' @param ... Comma separated key-value pairs in the form of `new_name = old_name` to rename selected variables.
+#' @param ...
+#'   For `rename()`: comma separated key-value pairs in the form of `new_name = old_name` to rename selected variables.
 #'
-#' @return A `data.frame`
+#'   For `rename_with()`: additional arguments passed onto `.fn`.
+#'
+#' @return
+#' A `data.frame` with the following properties:
+#'
+#' * Rows are not affected.
+#' * Column names are changed; column order is preserved.
+#' * `data.frame` attributes are preserved.
+#' * Groups are updated to reflect new names.
 #'
 #' @examples
 #' rename(mtcars, MilesPerGallon = mpg)
@@ -28,5 +38,30 @@ rename <- function(.data, ...) {
     new_names[new_names_zero] <- old_names[new_names_zero]
   }
   colnames(.data)[col_pos] <- new_names
+  .data
+}
+
+#' @param .fn A `function()` used to transform the selected `.cols`. Should return a character vector the same length as
+#' the input.
+#' @param .cols Columns to rename; defaults to all columns.
+#'
+#' @examples
+#' rename_with(mtcars, toupper)
+#' rename_with(mtcars, toupper, starts_with("c"))
+#'
+#' @rdname rename
+#' @export
+rename_with <- function(.data, .fn, .cols = everything(), ...) {
+  if (!is.function(.fn)) stop("`", .fn, "` is not a valid function")
+  grouped <- inherits(.data, "grouped_data")
+  if (grouped) grp_pos <- which(colnames(.data) %in% group_vars(.data))
+  col_pos <- do.call(select_positions, list(.data = .data, substitute(.cols)))
+  cols <- colnames(.data)[col_pos]
+  new_cols <- .fn(cols, ...)
+  if (any(duplicated(new_cols))) {
+    stop("New names must be unique however `", deparse(substitute(.fn)), "` returns duplicate column names")
+  }
+  colnames(.data)[col_pos] <- new_cols
+  if (grouped) .data <- set_groups(.data, colnames(.data)[grp_pos])
   .data
 }

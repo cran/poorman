@@ -50,28 +50,6 @@ seq2 <- function (from, to) {
   if (from > to) integer() else seq.int(from, to)
 }
 
-is_function <- function(x, frame) {
-  res <- tryCatch(
-    is.function(x),
-    warning = function(w) FALSE,
-    error = function(e) FALSE
-  )
-  if (isTRUE(res)) return(res)
-  res <- tryCatch(
-    is.function(eval(x)),
-    warning = function(w) FALSE,
-    error = function(e) FALSE
-  )
-  if (isTRUE(res)) return(res)
-  res <- tryCatch(
-    is.function(eval(as.symbol(deparse(substitute(x))))),
-    warning = function(w) FALSE,
-    error = function(e) FALSE
-  )
-  if (isTRUE(res)) return(res)
-  FALSE
-}
-
 collapse_to_sentence <- function(x) {
   len_x <- length(x)
   if (len_x == 0L) {
@@ -83,4 +61,15 @@ collapse_to_sentence <- function(x) {
   } else {
     paste(paste(x[1:(len_x - 1)], collapse = ", "), x[len_x], sep = " and ")
   }
+}
+
+is_named <- function(x) {
+  nms <- names(x)
+  if (is.null(nms)) return(FALSE)
+  if (any(names_are_invalid(nms))) return(FALSE)
+  TRUE
+}
+
+names_are_invalid <- function(x) {
+  x == "" | is.na(x)
 }

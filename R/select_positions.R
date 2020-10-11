@@ -48,10 +48,13 @@ select_positions <- function(.data, ..., .group_pos = FALSE) {
     missing_groups <- !(groups %in% cols)
     if (any(missing_groups)) {
       sel_missing <- groups[missing_groups]
-      message("Adding missing grouping variables: `", paste(sel_missing, collapse = "`, `"), "`")
       readd <- match(sel_missing, data_names)
-      if (length(names(cols)) > 0L) names(readd) <- data_names[readd]
-      pos <- c(readd, pos)
+      readd <- readd[!(readd %in% pos)]
+      if (length(readd) > 0L) {
+        message("Adding missing grouping variables: `", paste(sel_missing, collapse = "`, `"), "`")
+        if (length(names(cols)) > 0L) names(readd) <- data_names[readd]
+        pos <- c(readd, pos)
+      }
     }
   }
   pos[!duplicated(pos)]
@@ -78,7 +81,7 @@ select_char <- function(expr) {
 
 select_symbol <- function(expr) {
   expr_name <- as.character(expr)
-  if (grepl("^is\\.", expr_name) && is_function(expr)) {
+  if (grepl("^is\\.", expr_name) && is.function(expr)) {
     stop(
       "Predicate functions must be wrapped in `where()`.\n\n",
       sprintf("  data %%>%% select(where(%s))", expr_name)
