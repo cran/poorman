@@ -106,8 +106,17 @@ eval_call <- function(x) {
     `-` = select_minus(x),
     `c` = select_c(x),
     `(` = select_bracket(x),
+    `&` = select_and(x),
     select_context(x)
   )
+}
+
+select_and <- function(expr) {
+  exprs <- as.list(expr)[-1]
+  res <- do.call(c, lapply(exprs, eval_expr))
+  if (all(res > 0) || all(res < 0)) return(unique(res))
+  res <- res[!(duplicated(abs(res)) | duplicated(abs(res), fromLast = TRUE))]
+  res[res > 0]
 }
 
 select_seq <- function(expr) {
@@ -149,6 +158,8 @@ select_context <- function(expr) {
   eval(expr, envir = select_env$.data)
 }
 
+# -- Environment ---------------------------------------------------------------
+
 select_env <- new.env()
 select_env$setup <- function(.data, calling_frame) {
   select_env$.data <- .data
@@ -160,3 +171,11 @@ select_env$clean <- function() {
 select_env$get_colnames <- function() colnames(select_env$.data)
 select_env$get_nrow <- function() nrow(select_env$.data)
 select_env$get_ncol <- function() ncol(select_env$.data)
+
+# -- Helpers -------------------------------------------------------------------
+
+#' A cleaner interface to evaluating select_positions when column names are not passed via ...
+#' @noRd
+eval_select_pos <- function(.data, .cols, .group_pos = FALSE) {
+  do.call(select_positions, list(.data = .data, .cols, .group_pos = .group_pos))
+}

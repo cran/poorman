@@ -32,11 +32,26 @@ mutate <- function(.data, ...) {
 #' @export
 mutate.default <- function(.data, ...) {
   conditions <- dotdotdot(..., .impute_names = TRUE)
-  .data[, setdiff(names(conditions), names(.data))] <- NA
+  cond_nms <- names(dotdotdot(..., .impute_names = FALSE))
+  if (length(conditions) == 0L) return(.data)
   context$setup(.data)
   on.exit(context$clean(), add = TRUE)
   for (i in seq_along(conditions)) {
-    context$.data[, names(conditions)[i]] <- eval(conditions[[i]], envir = context$.data)
+    not_named <- (is.null(cond_nms) || cond_nms[i] == "")
+    res <- eval(conditions[[i]], envir = context$as_env())
+    res_nms <- names(res)
+    if (is.data.frame(res)) {
+      if (not_named) {
+        context$.data[, res_nms] <- res
+      } else {
+        context$.data[[cond_nms[i]]] <- res
+      }
+    } else if (is.atomic(res)) {
+      context$.data[[names(conditions)[[i]]]] <- res
+    } else {
+      if (is.null(res_nms)) names(res) <- names(conditions)[[i]]
+      context$.data[[names(res)]] <- res
+    }
   }
   context$.data
 }
@@ -45,5 +60,5 @@ mutate.default <- function(.data, ...) {
 mutate.grouped_data <- function(.data, ...) {
   rows <- rownames(.data)
   res <- apply_grouped_function("mutate", .data, drop = TRUE, ...)
-  res[rows, ]
+  res[rows, , drop = FALSE]
 }
