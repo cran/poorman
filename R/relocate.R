@@ -43,7 +43,11 @@
 #'
 #' @export
 relocate <- function(.data, ..., .before = NULL, .after = NULL) {
-  check_is_dataframe(.data)
+  UseMethod("relocate")
+}
+
+#' @export
+relocate.data.frame <- function(.data, ..., .before = NULL, .after = NULL) {
   data_names <- colnames(.data)
   col_pos <- select_positions(.data, ...)
 
@@ -71,6 +75,6 @@ relocate <- function(.data, ..., .before = NULL, .after = NULL) {
   col_pos <- col_pos[col_pos <= length(data_names)]
 
   res <- .data[col_pos]
-  if (has_groups(.data)) res <- set_groups(res, get_groups(.data))
+  if (has_groups(.data)) res <- groups_set(res, group_vars(.data))
   res
 }

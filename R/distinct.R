@@ -46,14 +46,13 @@
 #'
 #' @export
 distinct <- function(.data, ..., .keep_all = FALSE) {
-  check_is_dataframe(.data)
   UseMethod("distinct")
 }
 
 #' @export
-distinct.default <- function(.data, ..., .keep_all = FALSE) {
+distinct.data.frame <- function(.data, ..., .keep_all = FALSE) {
   if (ncol(.data) == 0L) return(.data[1, ])
-  cols <- deparse_dots(...)
+  cols <- dotdotdot(...)
   col_names <- names(cols)
   col_len <- length(cols)
   if (is.null(col_names) && col_len > 0L) names(cols) <- cols

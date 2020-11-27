@@ -1,7 +1,7 @@
 Package: poorman
 Type: Package
 Title: A Poor Man's Dependency Free Recreation of 'dplyr'
-Version: 0.2.3
+Version: 0.2.4
 Authors@R: person("Nathan", "Eastwood", "", "nathan.eastwood@icloud.com",
     role = c("aut", "cre"))
 Maintainer: Nathan Eastwood <nathan.eastwood@icloud.com>
@@ -17,7 +17,7 @@ LazyData: true
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2020-11-11 21:02:07 UTC; nathan
+Packaged: 2020-11-27 22:37:25 UTC; nathan
 Author: Nathan Eastwood [aut, cre]
 Repository: CRAN
-Date/Publication: 2020-11-12 06:40:07 UTC
+Date/Publication: 2020-11-27 22:50:02 UTC

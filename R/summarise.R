@@ -20,28 +20,33 @@
 #' @name summarise
 #' @export
 summarise <- function(.data, ...) {
-  check_is_dataframe(.data)
   UseMethod("summarise")
 }
 
 #' @export
-summarise.default <- function(.data, ...) {
+summarise.data.frame <- function(.data, ...) {
   fns <- dotdotdot(...)
   context$setup(.data)
   on.exit(context$clean(), add = TRUE)
   groups_exist <- context$is_grouped()
   if (groups_exist) {
-    group <- unique(context$get_columns(get_groups(context$.data)))
+    group <- unique(context$get_columns(group_vars(context$.data)))
+  }
+  if (is_empty_list(fns)) {
+    if (groups_exist) return(group) else return(data.frame())
   }
   res <- vector(mode = "list", length = length(fns))
+  eval_env <- c(as.list(context$.data), vector(mode = "list", length = length(fns)))
+  new_pos <- seq(length(context$.data) + 1L, length(eval_env), 1L)
   for (i in seq_along(fns)) {
-    out <- do.call(with, list(context$.data, fns[[i]]))
-    nms <- if (!is_named(out)) {
+    eval_env[[new_pos[i]]] <- do.call(with, list(eval_env, fns[[i]]))
+    nms <- if (!is_named(eval_env[[new_pos[i]]])) {
       if (!is.null(names(fns)[[i]])) names(fns)[[i]] else deparse(fns[[i]])
     } else {
       NULL
     }
-    res[[i]] <- build_data_frame(out, nms)
+    if (!is.null(nms)) names(eval_env)[[new_pos[i]]] <- nms
+    res[[i]] <- build_data_frame(eval_env[[new_pos[i]]], nms = nms)
   }
   res <- do.call(cbind, res)
   if (groups_exist) res <- cbind(group, res, row.names = NULL)
@@ -50,9 +55,9 @@ summarise.default <- function(.data, ...) {
 
 #' @export
 summarise.grouped_data <- function(.data, ...) {
-  groups <- get_groups(.data)
+  groups <- group_vars(.data)
   res <- apply_grouped_function("summarise", .data, drop = TRUE, ...)
-  res <- res[do.call(order, lapply(groups, function(x) res[, x])), ]
+  res <- res[do.call(order, lapply(groups, function(x) res[, x])), , drop = FALSE]
   rownames(res) <- NULL
   res
 }
@@ -61,6 +66,6 @@ summarise.grouped_data <- function(.data, ...) {
 #' @export
 summarize <- summarise
 #' @export
-summarize.default <- summarise.default
+summarize.data.frame <- summarise.data.frame
 #' @export
 summarize.grouped_data <- summarise.grouped_data

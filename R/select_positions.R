@@ -18,7 +18,7 @@
 #' @param group_pos `logical(1)`. Should grouping variable positions be returned (default: `FALSE`)?
 #'
 #' @return
-#' A vector of `integer`s.
+#' A vector of named positive `integer`s.
 #'
 #' @examples
 #' select_positions(mtcars, mpg)
@@ -30,6 +30,8 @@
 #' @noRd
 select_positions <- function(.data, ..., .group_pos = FALSE) {
   cols <- dotdotdot(...)
+  cols <- cols[!vapply(cols, is.null, FALSE)]
+  if (length(cols) == 0L) return(integer(0))
   select_env$setup(.data = .data, calling_frame = parent.frame(2L))
   on.exit(select_env$clean(), add = TRUE)
   data_names <- select_env$get_colnames()
@@ -44,7 +46,7 @@ select_positions <- function(.data, ..., .group_pos = FALSE) {
     )
   }
   if (isTRUE(.group_pos)) {
-    groups <- get_groups(.data)
+    groups <- group_vars(.data)
     missing_groups <- !(groups %in% cols)
     if (any(missing_groups)) {
       sel_missing <- groups[missing_groups]
@@ -57,7 +59,26 @@ select_positions <- function(.data, ..., .group_pos = FALSE) {
       }
     }
   }
-  pos[!duplicated(pos)]
+  if (length(data_names[pos]) != 0L) {
+    nm_pos <- names(pos)
+    if (any(nm_pos == "")) {
+      names(pos)[which(nm_pos == "")] <- data_names[pos[which(nm_pos == "")]]
+    }
+    if (is.null(nm_pos)) {
+      names(pos) <- data_names[abs(pos)]
+    }
+  }
+  uniques <- pos[!duplicated(pos)]
+  res_nms <- data_names[uniques]
+  res <- match(res_nms, data_names)
+  if (length(res) != 0L) {
+    res <- if (length(setdiff(names(uniques), data_names)) > 0L) {
+      if (all(uniques > 0L)) structure(res, .Names = names(uniques)) else structure(res, .Names = res_nms)
+    } else {
+      structure(res, .Names = res_nms)
+    }
+  }
+  res
 }
 
 eval_expr <- function(x) {
@@ -75,7 +96,7 @@ eval_expr <- function(x) {
 
 select_char <- function(expr) {
   pos <- match(expr, select_env$get_colnames())
-  if (is.na(pos)) stop("Column `", expr, "` does not exist")
+  if (any(is.na(pos))) stop("The following columns do not exist:\n    ", paste(expr, collapse = "\n    "))
   pos
 }
 

@@ -1,47 +1,7 @@
-#' Capture unevaluated dots
-#'
-#' Gather the unevaluated dots into a list, storing them as is.
-#'
-#' @param ... Arguments to be stored in the list.
-#' @param .impute_names `logical(1)`. Whether to fill any missing names of the list.
-#'
-#' @noRd
-dotdotdot <- function(..., .impute_names = FALSE) {
-  dots <- eval(substitute(alist(...)))
-  if (isTRUE(.impute_names)) {
-    deparse_dots <- lapply(dots, deparse)
-    names_dots <- names(dots)
-    unnamed <- if (is.null(names_dots)) rep(TRUE, length(dots)) else nchar(names_dots) == 0L
-    names(dots)[unnamed] <- deparse_dots[unnamed]
-  }
-  dots
-}
-
-#' Capture unevaluated dots
-#'
-#' Gather the unevaluated dots into a list, storing them as characters.
-#'
-#' @param ... Arguments to be stored in the list.
-#'
-#' @noRd
-deparse_dots <- function(...) {
-  vapply(substitute(...()), deparse, NA_character_)
-}
-
-deparse_var <- function(var, frame = if (is.null(eval_env$env)) parent.frame() else eval_env$env) {
-  sub_var <- eval(substitute(substitute(var)), frame)
-  if (is.symbol(sub_var)) var <- as.character(sub_var)
-  var
-}
-
 check_is_dataframe <- function(.data) {
   parent_fn <- all.names(sys.call(-1L), max.names = 1L)
   if (!is.data.frame(.data)) stop(parent_fn, " must be given a data.frame")
   invisible()
-}
-
-is_wholenumber <- function(x) {
-  x %% 1L == 0L
 }
 
 seq2 <- function (from, to) {
@@ -61,17 +21,6 @@ collapse_to_sentence <- function(x) {
   } else {
     paste(paste(x[1:(len_x - 1)], collapse = ", "), x[len_x], sep = " and ")
   }
-}
-
-is_named <- function(x) {
-  nms <- names(x)
-  if (is.null(nms)) return(FALSE)
-  if (any(names_are_invalid(nms))) return(FALSE)
-  TRUE
-}
-
-names_are_invalid <- function(x) {
-  x == "" | is.na(x)
 }
 
 #' Build a `data.frame` from a variety of inputs including atomic vectors, lists and other `data.frame`s

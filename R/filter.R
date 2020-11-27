@@ -24,12 +24,11 @@
 #'
 #' @export
 filter <- function(.data, ...) {
-  check_is_dataframe(.data)
   UseMethod("filter")
 }
 
 #' @export
-filter.default <- function(.data, ...) {
+filter.data.frame <- function(.data, ...) {
   conditions <- dotdotdot(...)
   cond_class <- vapply(conditions, typeof, NA_character_)
   if (any(cond_class != "language")) stop("Conditions must be logical vectors")

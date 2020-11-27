@@ -24,7 +24,6 @@
 #'
 #' @export
 unite <- function(data, col, ..., sep = "_", remove = TRUE, na.rm = FALSE) {
-  check_is_dataframe(data)
   col <- deparse_var(col)
   cols_pos <- if (missing(...)) seq_along(data) else select_positions(data, ...)
   to_unite <- data[, cols_pos, drop = FALSE]
@@ -44,12 +43,4 @@ unite <- function(data, col, ..., sep = "_", remove = TRUE, na.rm = FALSE) {
     data <- eval(bquote(relocate(data, col, .before = .(cols_pos[1]))))
   }
   data
-}
-
-substitute_w <- function(x) {
-  caller <- parent.frame()
-  caller2 <- sys.frame(sys.parent(2))   # see appendix for explanation
-  expr <- eval(bquote(substitute(.(substitute(x)),.(caller))))
-  expr <- eval(bquote(.(bquote)(.(expr))), caller2)
-  bquote(with(.(caller2), .(expr)))
 }

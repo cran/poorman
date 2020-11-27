@@ -8,6 +8,7 @@
 \alias{cur_group}
 \alias{cur_group_id}
 \alias{cur_group_rows}
+\alias{cur_column}
 \title{Context dependent expressions}
 \usage{
 n()
@@ -21,6 +22,8 @@ cur_group()
 cur_group_id()
 
 cur_group_rows()
+
+cur_column()
 }
 \description{
 These functions return information about the "current" group or "current" variable, so only work inside specific
@@ -50,6 +53,10 @@ its value.
 \itemize{
 \item \code{cur_group_rows()} gives the rows the groups appear in the data.
 }
+
+\itemize{
+\item \code{cur_column()} gives the name of the current column (in \code{\link[=across]{across()}} only).
+}
 }
 \section{\code{data.table}}{
 
@@ -77,6 +84,9 @@ gf \%>\% mutate(id = cur_group_id())
 gf \%>\% summarise(row = cur_group_rows())
 gf \%>\% summarise(data = list(cur_group()))
 gf \%>\% summarise(data = list(cur_data()))
+gf \%>\% summarise(data = list(cur_data_all()))
+
+gf \%>\% mutate(across(everything(), ~ paste(cur_column(), round(.x, 2))))
 
 }
 \seealso{
