@@ -67,6 +67,12 @@ expect_equal(
   info = "Test filter works in an anonymous function; factors (#9)"
 )
 
+expect_equal(
+  filter(.data = mtcars),
+  mtcars,
+  info = "filter() returns the input data if no parameters are given"
+)
+
 # Grouped Operations
 expect_equal(
   mtcars %>% group_by(carb) %>% filter(any(mpg > 28)) %>% ungroup(),
@@ -76,4 +82,29 @@ expect_equal(
     res[rows[rows %in% rownames(res)], ]
   },
   info = "Test grouped filters"
+)
+
+expect_equal(
+  mtcars %>% group_by(cyl, am) %>% filter(cyl %in% c(4, 8), .preserve = TRUE) %>% group_rows(),
+  list(
+    c(4L, 5L, 15L), c(1L, 12L, 13L, 14L, 20L, 21L, 22L, 25L), integer(0), integer(0),
+    c(2L, 3L, 6L, 7L, 8L, 9L, 10L, 11L, 16L, 17L, 18L, 19L), 23:24
+  ),
+  info = ".preserve = TRUE returns the correct row indicies"
+)
+
+expect_equal(
+  mtcars %>% group_by(cyl, am) %>% filter(cyl %in% c(4, 8), .preserve = FALSE) %>% group_rows(),
+  list(
+    c(4L, 5L, 15L), c(1L, 12L, 13L, 14L, 20L, 21L, 22L, 25L),
+    c(2L, 3L, 6L, 7L, 8L, 9L, 10L, 11L, 16L, 17L, 18L, 19L), 23:24
+  ),
+  info = ".preserve = FALSE returns the correct row indicies"
+)
+
+# Errors
+
+expect_error(
+  filter(.data = mtcars, mpg > 20, am = 1),
+  info = "Check for named arguments works"
 )

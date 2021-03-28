@@ -4,7 +4,7 @@
 #' explicit in the data. Each group key is given a single row within the `data.frame` and the group's data is stored
 #' within a list-column of the `data.frame`.
 #'
-#' Currently there is no pretty-printing provided for the results of `nest_by()` and they are not useble with other
+#' Currently there is no pretty-printing provided for the results of `nest_by()` and they are not useable with other
 #' functions such as [mutate()].
 #'
 #' @inheritParams group_split
@@ -29,7 +29,7 @@ nest_by.data.frame <- function(.data, ..., .key = "data", .keep = FALSE) {
 }
 
 #' @export
-nest_by.grouped_data <- function(.data, ..., .key = "data", .keep = FALSE) {
+nest_by.grouped_df <- function(.data, ..., .key = "data", .keep = FALSE) {
   if (!missing(...)) {
     stop("Can't re-group while nesting. Either `ungroup()` first or don't supply arguments to `nest_by()`")
   }

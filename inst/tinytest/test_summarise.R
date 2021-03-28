@@ -36,10 +36,7 @@ expect_equal(
 
 expect_equal(
   mtcars %>% summarise(n(), list(range(mpg))),
-  structure(
-    list(`n()` = 32L, `list(range(mpg))` = structure(list(c(10.4, 33.9)), class = "AsIs")),
-    class = "data.frame", row.names = c(NA, -1L)
-  ),
+  structure(list(`n()` = 32L, `list(range(mpg))` = list(c(10.4, 33.9))), class = "data.frame", row.names = c(NA, -1L)),
   info = "Functions returning multiple values that are wrapped in list are returned as nested columns"
 )
 
@@ -50,12 +47,10 @@ expect_equal(
   gd,
   structure(
     list(
-      am = c(0, 0, 0, 0, 0, 1, 1, 1, 1, 1),
-      cyl = c(4, 4, 6, 6, 8, 4, 4, 6, 6, 8),
-      gear = c(3, 4, 3, 4, 3, 4, 5, 4, 5, 5),
-      .rows = list(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L)
-    ),
-    row.names = c(NA, -10L), class = "data.frame"
+      am = c(0, 0, 0, 1, 1, 1),
+      cyl = c(4, 6, 8, 4, 6, 8),
+      .rows = list(1:2, 3:4, 5L, 6:7, 8:9, 10L)
+    ), row.names = c(NA, 6L), class = "data.frame", .drop = TRUE
   ),
   info = "Ensure the summarised data still contains group attributes"
 )
@@ -72,7 +67,7 @@ expect_equal(
       sumDisp = c(120.1, 287.5, 483, 335.2, 4291.4, 533.5, 215.4, 320, 145, 652)
     ),
     row.names = c(NA, 10L),
-    class = c("grouped_data", "data.frame")
+    class = c("grouped_df", "data.frame")
   ),
   info = "Test multiple groups and multiple summary functions"
 )
@@ -86,7 +81,7 @@ expect_equal(
 res <- mtcars %>% group_by(am) %>% summarise()
 expect_equal(
   class(res),
-  c("grouped_data", "data.frame"),
+  c("grouped_df", "data.frame"),
   info = "empty grouped summarise() returns groups #1"
 )
 expect_equal(
@@ -97,4 +92,35 @@ expect_equal(
   },
   data.frame(am = c(0, 1)),
   info = "empty grouped summarise() returns groups #2"
+)
+
+# .groups
+df <- data.frame(x = 1, y = 2) %>% group_by(x, y)
+expect_equal(
+  df %>% summarise() %>% group_vars(),
+  "x",
+  info = ".groups = NULL drops the last grouping variable when the results return a single value"
+)
+expect_equal(
+  df %>% summarise(.groups = "drop_last") %>% group_vars(),
+  "x",
+  info = ".groups = 'drop_last' drops the last grouping variable"
+)
+expect_equal(
+  df %>% summarise(.groups = "drop") %>% group_vars(),
+  character(),
+  info = ".groups = 'drop' drops all grouping variables"
+)
+expect_equal(
+  df %>% summarise(.groups = "keep") %>% group_vars(),
+  c("x", "y"),
+  info = ".groups = 'keep' keeps all grouping variables"
+)
+expect_equal(
+  mtcars %>%
+    group_by(cyl, vs) %>%
+    summarise(cyl_n = n()) %>%
+    group_vars(),
+  "cyl",
+  info = ".groups = NULL drops the last grouping variable when the results return a single value for multiple groups"
 )

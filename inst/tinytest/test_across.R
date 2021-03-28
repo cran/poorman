@@ -115,11 +115,14 @@ expect_equal(
 df <- data.frame(g = 1:2, a = 1:2, b = 3:4) %>% group_by(g)
 expect_equal(
   mutate(df, x = if_else(cur_group_id() == 1L, across(a)$a, across(b)$b)),
-  {
-    expect <- df
-    expect$x <- c(1L, 4L)
-    expect
-  },
+  structure(
+    list(g = 1:2, a = 1:2, b = 3:4, x = c(1L, 4L)),
+    groups = structure(list(g = 1:2, .rows = list(1L, 2L)),
+      row.names = 1:2,
+      class = "data.frame",
+      .drop = TRUE
+    ), row.names = 1:2, class = c("grouped_df", "data.frame")
+  ),
   info = "across() usage can depend on the group id"
 )
 
@@ -174,4 +177,42 @@ expect_equal(
   mtcars %>% summarise(across(starts_with("m"), list("mean", "sd"))),
   data.frame(mpg_1 = mean(mtcars$mpg), mpg_2 = sd(mtcars$mpg)),
   info = "character vector style functions work"
+)
+
+# if_all() and if_any()
+
+d <- data.frame(x = 10, y = 10)
+expect_error(filter(d, if_all(x:y, identity)), info = "if_all() enforces logical in filter")
+expect_error(filter(d, if_any(x:y, identity)), info = "if_any() enforces logical in filter")
+expect_error(mutate(d, ok = if_all(x:y, identity)), info = "if_all() enforces logical in mutate")
+expect_error(mutate(d, ok = if_any(x:y, identity)), info = "if_any() enforces logical in mutate")
+
+d <- data.frame(x = c(1, 5, 10, 10), y = c(0, 0, 0, 10), z = c(10, 5, 1, 10))
+res <- mutate(.data = d, any = if_any(x:z, ~ . > 8), all = if_all(x:z, ~ . > 8))
+expect_equal(res$any, c(TRUE, FALSE, TRUE, TRUE), info = "if_any() can be used in mutate")
+expect_equal(res$all, c(FALSE, FALSE, FALSE, TRUE), info = "if_all() can be used in mutate")
+
+df <- expand.grid(
+  x = c(TRUE, FALSE, NA), y = c(TRUE, FALSE, NA)
+)
+expect_identical(
+  filter(df, x & y),
+  filter(df, if_all(c(x, y), identity)),
+  info = "if_all() respects filter()-like NA handling"
+)
+expect_identical(
+  filter(df, x | y),
+  filter(df, if_any(c(x, y), identity)),
+  info = "if_any() respects filter()-like NA handling"
+)
+
+expect_equal(
+  mtcars %>% filter(if_any(contains("Width"), ~ . > 4)),
+  mtcars[mtcars$mpg > 100, ],
+  info = "if_any() conditions that return empty data.frames do not fail."
+)
+expect_equal(
+  mtcars %>% filter(if_all(contains("Width"), ~ . > 4)),
+  mtcars[mtcars$mpg > 100, ],
+  info = "if_all() conditions that return empty data.frames do not fail."
 )

@@ -29,7 +29,7 @@ build_data_frame <- function(x, nms = NULL) {
   res <- if (is.atomic(x)) {
     data.frame(x)
   } else if (is.list(x) && !is.data.frame(x)) {
-    data.frame(I(x))
+    structure(list(x = x), class = "data.frame", row.names = c(NA, -1L))
   } else if (is.data.frame(x)) {
     x
   }
@@ -44,3 +44,17 @@ build_data_frame <- function(x, nms = NULL) {
 #' is_nested(list(a = 1, b = list(c = 2, d = 3)))
 #' @noRd
 is_nested <- function(lst) vapply(lst, function(x) inherits(x[1L], "list"), FALSE)
+
+#' Remove all levels of a list
+#' @noRd
+squash <- function(lst) {
+  do.call(c, lapply(lst, function(x) if (is.list(x) && !is.data.frame(x)) squash(x) else list(x)))
+}
+
+#' Move entries within a list up one level
+#' @noRd
+flatten <- function(lst) {
+  nested <- is_nested(lst)
+  res <- c(lst[!nested], unlist(lst[nested], recursive = FALSE))
+  if (sum(nested)) Recall(res) else return(res)
+}

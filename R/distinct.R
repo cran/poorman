@@ -59,7 +59,8 @@ distinct.data.frame <- function(.data, ..., .keep_all = FALSE) {
   if (col_len == 0L) {
     res <- .data
   } else {
-    res <- mutate(.data, ...)
+    mut <- mutate_df(.data, ...)
+    res <- mut$data
     col_names <- names(cols)
     res <- if (!is.null(col_names)) {
       zero_names <- nchar(col_names) == 0L
@@ -81,6 +82,6 @@ distinct.data.frame <- function(.data, ..., .keep_all = FALSE) {
 }
 
 #' @export
-distinct.grouped_data <- function(.data, ..., .keep_all = FALSE) {
+distinct.grouped_df <- function(.data, ..., .keep_all = FALSE) {
   apply_grouped_function("distinct", .data, drop = TRUE, ..., .keep_all = .keep_all)
 }

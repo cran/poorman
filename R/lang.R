@@ -33,6 +33,11 @@ is_named <- function(x) {
   TRUE
 }
 
+have_name <- function(x) {
+  nms <- names(x)
+  if (is.null(nms)) rep(FALSE, length(x)) else !names_are_invalid(nms)
+}
+
 is_empty_list <- function(x) {
   inherits(x, "list") && length(x) == 0L
 }
@@ -48,4 +53,12 @@ is_empty_list <- function(x) {
 #' @noRd
 as_symbols <- function(x) {
   lapply(x, as.symbol)
+}
+
+#' Check whether the input is an atomic vector or a data.frame
+#' @noRd
+is_df_or_vector <- function(x) {
+  res <- is.data.frame(x) || is.atomic(x)
+  if (isFALSE(res)) stop("You must pass vector(s) and/or data.frame(s).")
+  TRUE
 }

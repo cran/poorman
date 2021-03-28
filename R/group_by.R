@@ -6,6 +6,8 @@
 #' @param ... One or more unquoted column names to group/ungroup the data by.
 #' @param .add `logical(1)`. When `FALSE` (the default) `group_by()` will override existing groups. To add to existing
 #' groups, use `.add = TRUE`.
+#' @param .drop `logical(1)`. Drop groups formed by factor levels that don't appear in the data? The default is `TRUE`
+#' except when `.data` has been previously grouped with `.drop = FALSE`. See [group_by_drop_default()] for details.
 #'
 #' @examples
 #' group_by(mtcars, am, cyl)
@@ -27,16 +29,16 @@
 #'
 #' @name group_by
 #' @export
-group_by <- function(.data, ..., .add = FALSE) {
+group_by <- function(.data, ..., .add = FALSE, .drop = group_by_drop_default(.data)) {
   UseMethod("group_by")
 }
 
 #' @export
-group_by.data.frame <- function(.data, ..., .add = FALSE) {
+group_by.data.frame <- function(.data, ..., .add = FALSE, .drop = group_by_drop_default(.data)) {
   vars <- dotdotdot(..., .impute_names = TRUE)
   if (all(vapply(vars, is.null, FALSE))) {
     res <- groups_set(.data, NULL)
-    class(res) <- class(res)[!(class(res) %in% "grouped_data")]
+    class(res) <- class(res)[!(class(res) %in% "grouped_df")]
     return(res)
   }
   new_cols <- add_group_columns(.data, vars)
@@ -46,13 +48,49 @@ group_by.data.frame <- function(.data, ..., .add = FALSE) {
   unknown <- !(groups %in% colnames(res))
   if (any(unknown)) stop("Invalid groups: ", groups[unknown])
   if (length(groups) > 0L) {
-    res <- groups_set(res, groups)
-    class(res) <- union("grouped_data", class(res))
-    res
-  } else {
-    res
+    res <- groups_set(res, groups, .drop)
+    class(res) <- union("grouped_df", class(res))
   }
+  res
 }
+
+#' Default value for .drop argument of group_by
+#'
+#' @param .tbl A `data.frame`.
+#'
+#' @examples
+#' group_by_drop_default(iris)
+#'
+#' iris %>%
+#'   group_by(Species) %>%
+#'   group_by_drop_default()
+#'
+#' iris %>%
+#'   group_by(Species, .drop = FALSE) %>%
+#'   group_by_drop_default()
+#'
+#' @return `TRUE` unless `.tbl` is a grouped `data.frame` that was previously obtained by `group_by(.drop = FALSE)`
+#'
+#' @export
+group_by_drop_default <- function(.tbl) {
+  UseMethod("group_by_drop_default")
+}
+
+#' @export
+group_by_drop_default.default <- function(.tbl) {
+  TRUE
+}
+
+#' @export
+group_by_drop_default.grouped_df <- function(.tbl) {
+  tryCatch({
+    !identical(attr(group_data(.tbl), ".drop"), FALSE)
+  }, error = function(e) {
+    TRUE
+  })
+}
+
+# -- Helpers -------------------------------------------------------------------
 
 add_group_columns <- function(.data, vars) {
   vars <- vars[!vapply(vars, is.null, FALSE)]
@@ -63,86 +101,4 @@ add_group_columns <- function(.data, vars) {
     .data <- do.call(mutate, c(list(.data = ungroup(.data)), vars[needs_mutate]))
   }
   list(data = .data, groups = names(vars))
-}
-
-#' @param x A `data.frame`.
-#' @return
-#' When using [ungroup()], a `data.frame`.
-#' @rdname group_by
-#' @export
-ungroup <- function(x, ...) {
-  UseMethod("ungroup")
-}
-
-#' @export
-ungroup.data.frame <- function(x, ...) {
-  rm_groups <- deparse_dots(...)
-  groups <- group_vars(x)
-  if (length(rm_groups) == 0L) rm_groups <- groups
-  x <- groups_set(x, groups[!(groups %in% rm_groups)])
-  if (length(attr(x, "groups")) == 0L) {
-    attr(x, "groups") <- NULL
-    class(x) <- class(x)[!(class(x) %in% "grouped_data")]
-  }
-  x
-}
-
-#' @export
-ungroup.grouped_data <- function(x, ...) {
-  NextMethod("ungroup")
-}
-
-#' Determine the grouping structure of the data
-#'
-#' @noRd
-groups_set <- function(x, groups) {
-  attr(x, "groups") <- if (is.null(groups) || length(groups) == 0L) {
-    NULL
-  } else {
-    group_data_worker(x, groups)
-  }
-  x
-}
-
-get_group_details <- function(x) {
-  groups <- attr(x, "groups", exact = TRUE)
-  if (is.null(groups)) character(0) else groups
-}
-
-has_groups <- function(x) {
-  groups <- group_vars(x)
-  if (length(groups) == 0L) FALSE else TRUE
-}
-
-#' @param fn `character(1)`. The function to apply to each group.
-#' @param .data A `data.frame`.
-#' @param ... Arguments to be passed to `fn`.
-#' @noRd
-apply_grouped_function <- function(fn, .data, drop = FALSE, ...) {
-  groups <- group_vars(.data)
-  grouped <- split_into_groups(.data, groups, drop)
-  res <- do.call(rbind, unname(lapply(grouped, fn, ...)))
-  if (any(groups %in% colnames(res))) {
-    class(res) <- c("grouped_data", class(res))
-    res <- groups_set(res, groups[groups %in% colnames(res)])
-  }
-  res
-}
-
-#' Print a grouped `data.frame`
-#'
-#' A print method for grouped `data.frame`s. Uses the standard `print.data.frame()` method but also reports the groups.
-#'
-#' @param x An object of class `grouped_data`.
-#' @param ... Additional arguments to [print()].
-#' @inheritParams base::print.data.frame
-#'
-#' @examples
-#' mtcars %>% group_by(cyl, am) %>% print()
-#'
-#' @noRd
-print.grouped_data <- function(x, ..., digits = NULL, quote = FALSE, right = TRUE, row.names = TRUE, max = NULL) {
-  class(x) <- "data.frame"
-  print(x, ..., digits = digits, quote = quote, right = right, row.names = row.names, max = max)
-  cat("\nGroups: ", paste(group_vars(x), collapse = ", "), "\n\n")
 }
