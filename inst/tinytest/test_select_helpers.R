@@ -179,3 +179,9 @@ expect_equal(
   iris[, "Species", drop = FALSE],
   info = "`&` works for all negative column positions"
 )
+
+expect_equal(
+  select(mtcars, poorman::everything()),
+  mtcars,
+  info = "pkg::fun() selecters do not fail"
+)

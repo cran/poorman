@@ -6,7 +6,7 @@
 \alias{poorman-package}
 \title{poorman: A Poor Man's Dependency Free Recreation of 'dplyr'}
 \description{
-\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
 A replication of key functionality from 'dplyr' and the wider 'tidyverse' using only 'base'.
 }
@@ -21,6 +21,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Nathan Eastwood \email{nathan.eastwood@icloud.com}
+
+Other contributors:
+\itemize{
+  \item Etienne Bacher \email{etienne.bacher@protonmail.com} (\href{https://orcid.org/0000-0002-9271-5075}{ORCID}) [contributor]
+}
 
 }
 \keyword{internal}

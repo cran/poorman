@@ -23,11 +23,12 @@ arrange.data.frame <- function(.data, ..., .by_group = FALSE) {
   dots <- dotdotdot(...)
   is_grouped <- has_groups(.data)
   if (isTRUE(.by_group)) dots <- c(groups(.data), dots)
-  rows <- arrange_rows(.data, dots)
-  # If grouped, need to follow the logic in
-  # https://github.com/tidyverse/dplyr/blob/master/R/generics.R#L102
-  # such that the .rows are rearranged
+  rows <- arrange_rows(.data = .data, dots)
+  row_number <- attr(.data, "row.names") # row.names returns a character vector
   out <- .data[rows, , drop = FALSE]
+  if (is.numeric(row_number)) {
+    row.names(out) <- row_number
+  }
   if (is_grouped) {
     attr(out, "groups") <- calculate_groups(out, group_vars(out))
   }
@@ -40,19 +41,29 @@ arrange_rows <- function(.data, dots) {
 
   if (length(dots) == 0L) return(seq_len(nrow(.data)))
 
-  directions <- vapply(
-    dots,
-    function(x) if (is.call(x) && deparse(x[[1]]) == "desc") "desc" else "asc",
-    NA_character_
-  )
+  for (i in seq_along(dots)) {
+    tmp <- deparse(dots[[i]])
+    if (startsWith(tmp, "desc(")) {
+      tmp <- gsub("^desc\\(", "-", tmp)
+      tmp <- gsub("\\)$", "", tmp)
+    }
+    dots[[i]] <- parse(text = tmp, keep.source = FALSE)[[1]]
+  }
 
-  dots <- lapply(
-    dots,
-    function(x) if (is.call(x) && deparse(x[[1]]) == "desc") x[[2]] else x
-  )
+  used <- unname(do.call(c, lapply(dots, find_used)))
+  used <- used[used %in% colnames(.data)]
+  for (i in seq_along(dots)) {
+    if (is.character(.data[[used[[i]]]])) {
+      .data[[used[[i]]]] <- factor(.data[[used[[i]]]])
+    }
+    if (is.factor(.data[[used[[i]]]]) &&
+        (startsWith(deparse(dots[[i]]), "desc(") ||
+         startsWith(deparse(dots[[i]]), "-"))) {
+      dots[[i]] <- bquote(-xtfrm(.(as.name(used[[i]]))))
+    }
+  }
 
   data <- do.call(transmute, c(list(.data = ungroup(.data)), dots))
-  descs <- which(directions == "desc")
-  data[, colnames(data)[descs]] <- data[, colnames(data)[descs], drop = FALSE] * -1
   do.call(order, c(data, list(decreasing = FALSE, na.last = TRUE)))
+
 }
