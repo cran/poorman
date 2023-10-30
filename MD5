@@ -1,8 +1,8 @@
-acad00b12bc15b4e43853d278e25b63d *DESCRIPTION
+718f4c94b00e15c64ea3fc9d92fa7b45 *DESCRIPTION
 34f9fcba64b4c95bebc04ef99440745f *LICENSE
-5266ee6921d52481f6aedb70703b786f *NAMESPACE
-419f80d71d014c84b4752f9c526b2a1b *NEWS.md
-7b2a87e9b8cdcb51b5c1cd3647e9e246 *R/across.R
+14018d22056ca2b71c4188f68e268fb9 *NAMESPACE
+ede185e8753a2b365a1403d3857ef82c *NEWS.md
+b406c3e7ab2a269c5971a0a7ba41bacf *R/across.R
 7337d159dcecd67f56e4ae754d7af6fb *R/arrange.R
 f5e38953de9304194de4dc6ec08da6b0 *R/between.R
 8b38f19434179fbe37cd8b3ed2bd0fef *R/bind.R
@@ -15,6 +15,7 @@ e05f1674bfb9bad00e6d89a85d2521a4 *R/desc.R
 38981974a752589d6108ea14f6a8a137 *R/distinct.R
 305f35760eab495235846114c6ec904f *R/dots.R
 e4ce913ef8239bdb40a3267f880e028e *R/env.R
+b3f7ed829237e085f5267aa53014ef38 *R/fill.R
 73f13ab8d25b8d5d5c76603e0c25fa3b *R/filter.R
 73c7e526ed61b0931089a546dbe792ee *R/glimpse.R
 b7eb013d8e8e9c8c1808f61444c7ff22 *R/gluestick.R
@@ -22,7 +23,7 @@ b7eb013d8e8e9c8c1808f61444c7ff22 *R/gluestick.R
 b21ab34763d896ed7ed567fa50fe4f56 *R/group_cols.R
 3139b1082e29d503656168a0a4b2ed21 *R/group_metadata.R
 c66b0a70449f654332c724d57a8d2f12 *R/group_split.R
-ad55265d5d1d150f520f7eefe3f453c2 *R/group_utils.R
+5fcb1d069b59d73799242b6b0929c147 *R/group_utils.R
 a7c3446ef90d17352d56a2b8c0d91f75 *R/if_else.R
 e17a87fe071f6238cda8259ba271f959 *R/init.R
 41d3770f783c3e665ad2250b61a13155 *R/joins.R
@@ -30,15 +31,15 @@ e17a87fe071f6238cda8259ba271f959 *R/init.R
 e8c66eac56dcc2f0f012cb8a9fd6d7a4 *R/lang.R
 7c25b25de59f07851c4a73c1bb9f60cd *R/lead-lag.R
 57e00ce21778ff214d8a6fa9dc25677e *R/lst.R
-e307b7b0ab7a408c75e96963c0abfb29 *R/mutate.R
+bf15347288af06ab2e9b2d4086bfb555 *R/mutate.R
 8ad7f7b6452bb29f3d4431ed1569618c *R/n_distinct.R
 8eabac40ea513144818c46a01f10ab4f *R/na_if.R
 bb1b742452687e0d1887f19cf9952845 *R/near.R
 cfb47a2f9a7c5ff85a75347e1ce1b682 *R/nest_by.R
 87238a5a4ef15eb861b00440ca58a3a4 *R/nth.R
 c41953e142e3e209d56e1fdaf38bfa38 *R/pipe.R
-76d41a066bb764da9791afb21e286c72 *R/pivot_longer.R
-1177abb8352e945c1e77b1a1db00852a *R/pivot_wider.R
+b664544b3e8249b29ebf2b6b56cc46ad *R/pivot_longer.R
+a9fd58ac5ae6d254a109cc6ed46c4587 *R/pivot_wider.R
 29e64be3984a9a840b58d1738660124a *R/poorman-package.R
 734cb4bd79baa35c19a199bac56c7bf1 *R/print.R
 7d0d8b316219c1b53f65c867fdc2d1ab *R/pull.R
@@ -62,11 +63,11 @@ c082406b7d8b422d25da082097dda0dc *R/utils.R
 81ba6c38b807ab08553f432bab0738ba *R/where.R
 9348f83eba4463a34c8fad1ba264b334 *R/window_rank.R
 b9368ea13083249b039563b588983502 *R/with_groups.R
-b7a6c3325b6882f16cd28f21fbba036d *README.md
-f93f293e92d65f87a2aa6c75dd6600f2 *build/vignette.rds
+3bb4484b53aeb36064ee887865770e21 *README.md
+13219862632537ba0bfeea409c726489 *build/vignette.rds
 3c9e2d06e8560272e30c98b0c827478b *inst/doc/faq.R
 d56ac3578d7e5a291b187ddc868e2681 *inst/doc/faq.Rmd
-d2582dd6e799a3bc79c2dfd540284cea *inst/doc/faq.html
+8e2432913150cb05d22b36b62b9df271 *inst/doc/faq.html
 3a33985d2899115627f2643c8db68df6 *inst/tinytest/test_across.R
 210f0cb7e6616cc6a33feb91cd7e0662 *inst/tinytest/test_arrange.R
 fc9a16905b4c7b0735863c530b3d0ef6 *inst/tinytest/test_as_function.R
@@ -80,6 +81,7 @@ fc9a16905b4c7b0735863c530b3d0ef6 *inst/tinytest/test_as_function.R
 7880ab96f41bbf2c4f60e23a3513db2c *inst/tinytest/test_desc.R
 ab5b96f2b86dd79664a4a117f02c2385 *inst/tinytest/test_distinct.R
 608185456fe44fe88bc885956485ec5f *inst/tinytest/test_empty_groups.R
+2f0fa416fc3ed3195d726c4cd38ca575 *inst/tinytest/test_fill.R
 362e90c9e89b1678db2107fa2df4919e *inst/tinytest/test_filter.R
 5f546839f13babf057962763703bfcdb *inst/tinytest/test_glimpse.R
 216c64eb30820a7ad51d96ebb543ce13 *inst/tinytest/test_group_by.R
@@ -89,7 +91,7 @@ a0a87af06c0af1330e48d1a141509ea7 *inst/tinytest/test_if_else.R
 e0fcc2ad6990591e3d7d0d2bc298f923 *inst/tinytest/test_joins_filter.R
 f86ed1317a18c86f9c1fd57b89b7524b *inst/tinytest/test_lead_lag.R
 8dab9d5647b8394496af0410180714e1 *inst/tinytest/test_lst.R
-432d6e9fe35328424c50d3d6e079205a *inst/tinytest/test_mutate.R
+d0958f789e879f8e22d44988fbf0a25d *inst/tinytest/test_mutate.R
 05dcc494b2d271e5e0b16a312a097ac2 *inst/tinytest/test_mutate_joins.R
 774682af064a7e8630a9a1302c1fa785 *inst/tinytest/test_n.R
 65a7f511cf4ace17341cda1e7e0666d4 *inst/tinytest/test_n_distinct.R
@@ -120,7 +122,7 @@ edb273720283afb8cbbf348fd178387c *inst/tinytest/test_unite.R
 28e99f76e17c2cd63dc780a7b99be5f2 *inst/tinytest/test_where.R
 2ffbf25376884a49fd8cb3877c96d28c *inst/tinytest/test_window_rank.R
 c548e6557010e70e02def63edad7c882 *inst/tinytest/test_with_groups.R
-29f8c7fe8d2a698190c02fa217675c4a *man/across.Rd
+c0ea326b543ac79b82e9afb1a9d0a69e *man/across.Rd
 fed5a9f63b47c30cbacfbc983ecbe4e0 *man/arrange.Rd
 8a13578556958430b0908cd5360879df *man/between.Rd
 d9a449f43a0cacd8d0ecb610bdafa3b1 *man/bind.Rd
@@ -132,6 +134,7 @@ d9a449f43a0cacd8d0ecb610bdafa3b1 *man/bind.Rd
 d2b0041756aaf8081378d7d8b61a651a *man/desc.Rd
 be5571082c29e1bc7edd91c16f66dc38 *man/distinct.Rd
 f1020b7971259ebdbdc22a3fc026b63c *man/figures/logo.png
+0aa2a4a5c39ef0df98cbb93eed862b7b *man/fill.Rd
 6d60f2a2c21a9c41db0408ebf2507164 *man/filter.Rd
 961d6dca1cde159df6f233cff3d09c41 *man/filter_joins.Rd
 7118fe5b55244c8c5dc606a04d398f31 *man/glimpse.Rd
