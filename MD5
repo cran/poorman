@@ -1,4 +1,4 @@
-718f4c94b00e15c64ea3fc9d92fa7b45 *DESCRIPTION
+c1d5a284ab23fa173b6437ffd3929e91 *DESCRIPTION
 34f9fcba64b4c95bebc04ef99440745f *LICENSE
 14018d22056ca2b71c4188f68e268fb9 *NAMESPACE
 ede185e8753a2b365a1403d3857ef82c *NEWS.md
@@ -22,7 +22,7 @@ b7eb013d8e8e9c8c1808f61444c7ff22 *R/gluestick.R
 0bc15f371aa110c9c9f4dcdffa26d36b *R/group_by.R
 b21ab34763d896ed7ed567fa50fe4f56 *R/group_cols.R
 3139b1082e29d503656168a0a4b2ed21 *R/group_metadata.R
-c66b0a70449f654332c724d57a8d2f12 *R/group_split.R
+ccd2b9fd35ef1fa4889549f402456ee0 *R/group_split.R
 5fcb1d069b59d73799242b6b0929c147 *R/group_utils.R
 a7c3446ef90d17352d56a2b8c0d91f75 *R/if_else.R
 e17a87fe071f6238cda8259ba271f959 *R/init.R
@@ -35,7 +35,7 @@ bf15347288af06ab2e9b2d4086bfb555 *R/mutate.R
 8ad7f7b6452bb29f3d4431ed1569618c *R/n_distinct.R
 8eabac40ea513144818c46a01f10ab4f *R/na_if.R
 bb1b742452687e0d1887f19cf9952845 *R/near.R
-cfb47a2f9a7c5ff85a75347e1ce1b682 *R/nest_by.R
+9d82d371d85be218528a40868f6f0b0f *R/nest_by.R
 87238a5a4ef15eb861b00440ca58a3a4 *R/nth.R
 c41953e142e3e209d56e1fdaf38bfa38 *R/pipe.R
 b664544b3e8249b29ebf2b6b56cc46ad *R/pivot_longer.R
@@ -52,7 +52,7 @@ d029e99032298a37c284cfc092eb229c *R/rename.R
 fb305099b15a4ef01a2a7e3f4f8921b0 *R/rownames.R
 f244cf2f2dc3a1b5c67735b6c8af7775 *R/select.R
 22060ae5c9db007c7bd6cdf2fb670b3b *R/select_helpers.R
-92ad70b27ef2e99634f6bf0081f76363 *R/select_positions.R
+58b58d3f1b44c629d93c70f26b237ef2 *R/select_positions.R
 41fc9e7b78f3dcf84fc3d0d5ece6706e *R/slice.R
 53edf807fd8908d3662c19121d788bc5 *R/summarise.R
 1fc1a2b5a25828251619271b09329152 *R/transmute.R
@@ -63,9 +63,9 @@ c082406b7d8b422d25da082097dda0dc *R/utils.R
 81ba6c38b807ab08553f432bab0738ba *R/where.R
 9348f83eba4463a34c8fad1ba264b334 *R/window_rank.R
 b9368ea13083249b039563b588983502 *R/with_groups.R
-3bb4484b53aeb36064ee887865770e21 *README.md
-13219862632537ba0bfeea409c726489 *build/vignette.rds
-3c9e2d06e8560272e30c98b0c827478b *inst/doc/faq.R
+651340d1638b8182718123e231fc2ba7 *README.md
+36e5fbd27406a69e5e62cfa8e5018dd3 *build/vignette.rds
+5e270ae6034b339c2a13d20a5f7d2dec *inst/doc/faq.R
 d56ac3578d7e5a291b187ddc868e2681 *inst/doc/faq.Rmd
 8e2432913150cb05d22b36b62b9df271 *inst/doc/faq.html
 3a33985d2899115627f2643c8db68df6 *inst/tinytest/test_across.R
@@ -97,7 +97,7 @@ d0958f789e879f8e22d44988fbf0a25d *inst/tinytest/test_mutate.R
 65a7f511cf4ace17341cda1e7e0666d4 *inst/tinytest/test_n_distinct.R
 6bf0788bb8d317a1b75c2544cf746489 *inst/tinytest/test_na_if.R
 b9c464b9df4931f18c78e2cb0a6ee8b0 *inst/tinytest/test_near.R
-cc8fe04b3abe89a971946a9c8cbe69da *inst/tinytest/test_nest_by.R
+0d36872a2468566a1c426759405e04ea *inst/tinytest/test_nest_by.R
 bdb2f0818bfbdb4d1c883a982f19fceb *inst/tinytest/test_nth.R
 6f85db0159a69d165609ceacb558ab7d *inst/tinytest/test_pipe.R
 99d32ca3ba159f7d398fca5af0a919f5 *inst/tinytest/test_pivot_longer.R
@@ -142,7 +142,7 @@ d6f929bfd6fcf3d0f3439bfe812025ca *man/group_by.Rd
 8ba48af3913f0fe319ccc6273a40d51c *man/group_by_drop_default.Rd
 1a5de25b8096ce911e86ab31f9c824ea *man/group_cols.Rd
 cc3b1f38c3c4b70e108f2d2cf3175414 *man/group_metadata.Rd
-c3c987643a116019cffec974689e558a *man/group_split.Rd
+fdd76ed859f8bdb68892ac2b418c60d6 *man/group_split.Rd
 b19b153e68e9cb467a77d8017bb7a120 *man/if_else.Rd
 3b735b24f70bfcd114f9e115509f8cdf *man/lag.Rd
 3051da3e296fa2c8998995336b575014 *man/lst.Rd
