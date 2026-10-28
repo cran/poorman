@@ -18,10 +18,31 @@
 #'
 #' * [if_else()], [recode()], [case_when()]
 #'
+#' @section Variables made inside expressions:
+#' A variable assigned inside an expression, e.g. `{ tmp <- x * 2; tmp + 1 }`, can be used by the later expressions of
+#' the same call. On grouped data, each group has its own variables, so a variable assigned while evaluating one group
+#' is never seen by the next group. This differs from `dplyr` 1.0.10, where such a variable can leak into the groups
+#' evaluated after it.
+#'
+#' @section Results of incompatible types across groups:
+#' On grouped data, the results of an expression for each group are combined into one column. When two results have
+#' incompatible types, e.g. a character in one group and a double in another, there is an error which names the type
+#' of the results before the incompatible one and the type of the incompatible one, as in `dplyr` 1.0.10, with these
+#' differences:
+#' * A factor is named `<factor>` and a data frame `<data.frame>`. `dplyr` adds a hash of the levels of a factor and the
+#'   types of the columns of a data frame, e.g. `<data.frame< a: double b: character >>`.
+#' * When factors and character vectors come before the incompatible result, the group named for the results before it
+#'   can differ. For example, with a factor, `"b"` and `1` as the results of groups 1 to 3, `dplyr` names group 1 as
+#'   `<character>` and `poorman` names group 2.
+#'
 #' @param .data A `data.frame`.
 #' @param ... Name-value pairs of expressions, each with length `1L`. The name of each argument will be the name of a
 #' new column and the value will be its corresponding value. Use a `NULL` value in `mutate` to drop a variable. New
 #' variables overwrite existing variables of the same name.
+#'
+#' A name can also be given with `:=`, e.g. `total := sum(x)`. A string on the left of `:=` is a `gluestick` template
+#' which is filled in from the calling environment, so that a name can be built from a variable, e.g.
+#' `"{var}_mean" := mean(x)`.
 #'
 #' @examples
 #' mutate(mtcars, mpg2 = mpg * 2)
@@ -91,16 +112,39 @@ mutate.data.frame <- function(
   .after = NULL
 ) {
   keep <- match.arg(arg = .keep, choices = c("all", "used", "unused", "none"), several.ok = FALSE)
+  env <- parent.frame()
+  mutate_cols(
+    .data = .data,
+    dots = dotdotdot(..., .env = env),
+    env = env,
+    keep = keep,
+    before = substitute(.before),
+    after = substitute(.after)
+  )
+}
 
-  res <- mutate_df(.data = .data, ...)
+## -- Helpers ----------------------------------------------------------------------------------------------------------
+
+#' Add new columns and keep the requested columns
+#'
+#' The body of `mutate()`, which takes its expressions and environment explicitly so that verbs built on it, e.g.
+#' `transmute()`, can evaluate in the frame of their own caller.
+#'
+#' @param .data A `data.frame`.
+#' @param dots A `list` of unevaluated expressions, as returned by `dotdotdot()`.
+#' @param env An `environment` in which to look up variables that are not columns.
+#' @param keep `character(1)`. One of `"all"`, `"used"`, `"unused"` or `"none"`, as `mutate(.keep)`.
+#' @param before,after Unevaluated `.before` and `.after` arguments of `mutate()`.
+#' @return A `data.frame`.
+#' @noRd
+mutate_cols <- function(.data, dots, env, keep = "all", before = NULL, after = NULL) {
+  res <- mutate_df(.data = .data, dots = dots, env = env)
   data <- res$data
   new_cols <- res$new_cols
 
-  .before <- substitute(.before)
-  .after <- substitute(.after)
-  if (!is.null(.before) || !is.null(.after)) {
+  if (!is.null(before) || !is.null(after)) {
     new <- setdiff(new_cols, names(.data))
-    data <- do.call(relocate, c(list(.data = data), new, .before = .before, .after = .after))
+    data <- do.call(relocate, c(list(.data = data), new, .before = before, .after = after))
   }
 
   if (keep == "all") {
@@ -118,57 +162,38 @@ mutate.data.frame <- function(
   }
 }
 
-#' @export
-mutate.grouped_df <- function(.data, ...) {
-  context$group_env <- parent.frame(n = 1)
-  on.exit(rm(list = c("group_env"), envir = context), add = TRUE)
-  rows <- rownames(.data)
-  res <- apply_grouped_function("mutate", .data, drop = TRUE, ...)
-  res[rows, , drop = FALSE]
-}
-
-## -- Helpers ----------------------------------------------------------------------------------------------------------
-
-mutate_df <- function(.data, ...) {
-  conditions <- dotdotdot(..., .impute_names = TRUE)
-  cond_nms <- names(dotdotdot(..., .impute_names = FALSE))
-  if (length(conditions) == 0L) {
-    return(list(
-      data = .data,
-      used_cols = NULL,
-      new_cols = NULL
-    ))
-  }
-  used <- unname(do.call(c, lapply(conditions, find_used)))
+#' Compute new columns
+#'
+#' The expressions are evaluated for each group by `eval_groups()`. The results of each are combined across the groups
+#' by `combine_groups()` and put back into the order of the rows.
+#'
+#' @param .data A `data.frame`.
+#' @param dots A `list` of unevaluated expressions, as returned by `dotdotdot()`.
+#' @param env An `environment` in which to look up variables that are not columns.
+#' @return A `list` with `data`, `.data` with the new columns, `used_cols`, the columns of `.data` used by the
+#' expressions, and `new_cols`, the names of the new columns.
+#' @noRd
+mutate_df <- function(.data, dots, env) {
+  if (length(dots) == 0L) return(list(data = .data, used_cols = NULL, new_cols = NULL))
+  used <- unname(do.call(c, lapply(dots, find_used)))
   used <- used[used %in% colnames(.data)]
-  context$setup(.data)
-  on.exit(context$clean(), add = TRUE)
-  for (i in seq_along(conditions)) {
-    not_named <- (is.null(cond_nms) || cond_nms[i] == "")
-    res <- eval(
-      conditions[[i]],
-      envir = context$as_env(),
-      enclos = if (!is.null(context$group_env)) context$group_env else parent.frame(n = 2)
-    )
-    res_nms <- names(res)
-    if (is.data.frame(res)) {
-      if (not_named) {
-        context$.data[, res_nms] <- res
-      } else {
-        context$.data[[cond_nms[i]]] <- res
-      }
-    } else if (is.atomic(res)) {
-      cond_nms[i] <- names(conditions)[[i]]
-      context$.data[[cond_nms[i]]] <- res
+  res <- eval_groups(.data, dots, env, group_size_rule, drop_null = TRUE)
+  order <- ungroup_order(res$rows, .row_names_info(.data, 2L))
+  new_cols <- character()
+  for (i in seq_along(dots)) {
+    col <- combine_groups(res, i)
+    if (!is.null(order)) col <- vec_slice(col, order)
+    if (res$unnamed[[i]] && is.data.frame(col)) {
+      for (j in names(col)) .data[[j]] <- .subset2(col, j)
+      new_cols <- c(new_cols, names(col))
     } else {
-      context$.data[[names(conditions)[[i]]]] <- res
+      .data[[res$labels[[i]]]] <- col
+      new_cols <- c(new_cols, res$labels[[i]])
     }
   }
-  list(
-    data = context$.data,
-    used_cols = used,
-    new_cols = cond_nms
-  )
+  groups <- group_vars(.data)
+  if (any(groups %in% new_cols)) .data <- groups_set(.data, groups)
+  list(data = .data, used_cols = used, new_cols = new_cols)
 }
 
 #' Recursively find used variables in an expression

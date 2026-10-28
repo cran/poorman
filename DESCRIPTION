@@ -1,7 +1,7 @@
 Package: poorman
 Type: Package
 Title: A Poor Man's Dependency Free Recreation of 'dplyr'
-Version: 0.2.8
+Version: 0.3.0
 Authors@R: c(
     person("Nathan", "Eastwood", "", "nathan.eastwood@icloud.com",
            role = c("aut", "cre")),
@@ -20,8 +20,8 @@ RoxygenNote: 7.2.3
 VignetteBuilder: knitr
 Language: en-GB
 NeedsCompilation: no
-Packaged: 2026-07-30 16:04:53 UTC; nathan
+Packaged: 2026-10-28 11:40:18 UTC; nathan
 Author: Nathan Eastwood [aut, cre],
   Etienne Bacher [ctb] (ORCID: <https://orcid.org/0000-0002-9271-5075>)
 Repository: CRAN
-Date/Publication: 2026-07-31 00:00:36 UTC
+Date/Publication: 2026-10-28 18:40:08 UTC

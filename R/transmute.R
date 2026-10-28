@@ -6,12 +6,6 @@ transmute <- function(.data, ...) {
 
 #' @export
 transmute.data.frame <- function(.data, ...) {
-  mutate(.data, ..., .keep = "none")
-}
-
-#' @export
-transmute.grouped_df <- function(.data, ...) {
-  rows <- rownames(.data)
-  res <- apply_grouped_function("transmute", .data, drop = TRUE, ...)
-  res[rows, ]
+  env <- parent.frame()
+  mutate_cols(.data, dotdotdot(..., .env = env), env, keep = "none")
 }

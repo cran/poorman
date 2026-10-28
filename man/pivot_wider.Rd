@@ -7,39 +7,57 @@
 pivot_wider(
   data,
   id_cols = NULL,
-  values_from = "Value",
   names_from = "Name",
-  names_sep = "_",
   names_prefix = "",
+  names_sep = "_",
   names_glue = NULL,
+  names_sort = FALSE,
+  names_repair = "check_unique",
+  values_from = "Value",
   values_fill = NULL,
+  values_fn = NULL,
   ...
 )
 }
 \arguments{
 \item{data}{\code{data.frame}. The data to pivot.}
 
-\item{id_cols}{\code{character(1)}. The name of the column that identifies the rows. If \code{NULL}, it will use all the unique
-rows.}
+\item{id_cols}{<\code{\link[=select_helpers]{poor-select}}>. The columns that uniquely identify each observation. Defaults to
+all columns in \code{data} except for the columns specified in \code{names_from} and \code{values_from}.}
 
-\item{values_from}{\code{character(n)}. The name of the column that contains the values to be used as future variable
-values.}
-
-\item{names_from}{\code{character(n)}. The name of the column(s) that contains the levels to be used as future column
-names.}
-
-\item{names_sep}{\code{character(1)}. If \code{names_from} or \code{values_from} contains multiple variables, this will be used to
-join their values together into a single string to use as a column name.}
+\item{names_from}{<\code{\link[=select_helpers]{poor-select}}>. The column(s) that contain the levels to be used as future
+column names.}
 
 \item{names_prefix}{\code{character(1)}. String added to the start of every variable name. This is particularly useful if
 \code{names_from} is a numeric vector and you want to create syntactic variable names.}
 
-\item{names_glue}{\code{character(1)}. Instead of \code{names_sep} and \code{names_prefix}, you can supply a
-\href{https://glue.tidyverse.org/index.html}{glue specification} that uses the \code{names_from} columns to create custom
-column names. Note that the only delimiters supported by \code{names_glue} are curly brackets, \verb{\{} and \verb{\}}.}
+\item{names_sep}{\code{character(1)}. If \code{names_from} or \code{values_from} contains multiple variables, this will be used to
+join their values together into a single string to use as a column name.}
 
-\item{values_fill}{\code{numeric(n)}. Optionally, a (scalar) value that will be used to replace missing values in the new
-columns created.}
+\item{names_glue}{\code{character(1)}. Instead of \code{names_sep} and \code{names_prefix}, you can supply a
+gluestick specification that uses the \code{names_from} columns to create custom column names. Note that the only
+delimiters supported by \code{names_glue} are curly brackets, \verb{\{} and \verb{\}}.}
+
+\item{names_sort}{\code{logical(1)}. Should the column names be sorted? If \code{FALSE}, the default, column names are ordered
+by first appearance. Factors are sorted by their levels and characters in the C locale, with \code{NA} last.}
+
+\item{names_repair}{\code{character(1)} or \code{function}. What happens if the output has invalid column names. The default,
+\code{"check_unique"}, is to error if the columns are duplicated. Use \code{"minimal"} to allow duplicates in the output,
+\code{"unique"} to de-duplicate by adding numeric suffixes or \code{"universal"} to also make the names syntactic. A function
+is applied to the names.}
+
+\item{values_from}{<\code{\link[=select_helpers]{poor-select}}>. The column(s) that contain the values to be used as future
+variable values. If the values are not uniquely identified by the \code{id_cols} and \code{names_from} columns, the output
+will contain list-columns and a warning is given.}
+
+\item{values_fill}{Optionally, a scalar value that will be used to fill in missing values, i.e. combinations of
+\code{id_cols} and \code{names_from} which are not present in \code{data}. Explicit \code{NA}s in \code{values_from} are not replaced. This
+can also be a named list, specifying a fill value for each of the \code{values_from} columns.}
+
+\item{values_fn}{\code{function} or named \code{list()}. Optionally, a function applied to the value in each cell in the
+output, typically to summarise values which are not uniquely identified, e.g. \code{values_fn = mean}. A named list
+gives a function for each \code{values_from} column, where functions may also be given as formulas, e.g.
+\code{list(value = ~ max(.x))}. Use \code{values_fn = list} to create list-columns without a warning.}
 
 \item{...}{Not used for now.}
 }

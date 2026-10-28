@@ -23,17 +23,17 @@
 #' `by = c("a" = "b", "c" = "d")` will match `x$a` to `y$b` and `x$c` to `y$d`.
 #'
 #' To perform a cross-join, generating all combinations of `x` and `y`, use `by = character()`.
+#' @param copy Ignored. Included for compatibility with `dplyr`, where it allows `y` to come from a different data
+#' source.
 #' @param suffix `character(2)`. If there are non-joined duplicate variables in `x` and `y`, these suffixes will be
 #' added to the output to disambiguate them.
-#' @param ... Additional arguments to pass to [merge()]
-#' @param keep `logical(1)`. Should the join keys from both `x` and `y` be preserved in the output? Only applies to
-#' `left_join()`, `right_join()`, and `full_join()`.
+#' @param ... Ignored. Included for compatibility with `dplyr`.
+#' @param keep `logical(1)`. Should the join keys from both `x` and `y` be preserved in the output?
 #' @param na_matches Should `NA` and `NaN` values match one another?
 #'
-#' The default, `"na"`, treats two `NA` or `NaN` values as equal, like `%in%`, [match()], [merge()].
+#' The default, `"na"`, treats two `NA` or two `NaN` values as equal, like `%in%` and [match()].
 #'
-#' Use `"never"` to always treat two `NA` or `NaN` values as different, like joins for database sources, similarly to
-#' `merge(incomparables = FALSE)`.
+#' Use `"never"` to always treat two `NA` or `NaN` values as different, like joins for database sources.
 #'
 #' @return
 #' A `data.frame`. The order of the rows and columns of `x` is preserved as much as possible. The output has the
@@ -71,58 +71,120 @@ NULL
 
 #' @rdname mutate_joins
 #' @export
-inner_join <- function(x, y, by = NULL, suffix = c(".x", ".y"), ..., na_matches = c("na", "never")) {
-  join_worker(x = x, y = y, by = by, suffix = suffix, sort = FALSE, ..., keep = FALSE, na_matches = na_matches)
+inner_join <- function(
+  x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")
+) {
+  join_worker(x = x, y = y, by = by, suffix = suffix, keep = keep, na_matches = na_matches, type = "inner")
 }
 
 #' @rdname mutate_joins
 #' @export
-left_join <- function(x, y, by = NULL, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")) {
-  join_worker(x = x, y = y, by = by, suffix = suffix, all.x = TRUE, ..., keep = keep, na_matches = na_matches)
+left_join <- function(
+  x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")
+) {
+  join_worker(x = x, y = y, by = by, suffix = suffix, keep = keep, na_matches = na_matches, type = "left")
 }
 
 #' @rdname mutate_joins
 #' @export
-right_join <- function(x, y, by = NULL, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")) {
-  join_worker(x = x, y = y, by = by, suffix = suffix, all.y = TRUE, ..., keep = keep, na_matches = na_matches)
+right_join <- function(
+  x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")
+) {
+  join_worker(x = x, y = y, by = by, suffix = suffix, keep = keep, na_matches = na_matches, type = "right")
 }
 
 #' @rdname mutate_joins
 #' @export
-full_join <- function(x, y, by = NULL, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")) {
-  join_worker(x = x, y = y, by = by, suffix = suffix, all = TRUE, ..., keep = keep, na_matches = na_matches)
+full_join <- function(
+  x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ..., keep = FALSE, na_matches = c("na", "never")
+) {
+  join_worker(x = x, y = y, by = by, suffix = suffix, keep = keep, na_matches = na_matches, type = "full")
 }
 
-join_worker <- function(x, y, by = NULL, suffix = c(".x", ".y"), keep = FALSE, na_matches = c("na", "never"), ...) {
+join_worker <- function(x, y, by, suffix, keep, na_matches, type) {
   na_matches <- match.arg(arg = na_matches, choices = c("na", "never"), several.ok = FALSE)
-  incomparables <- if (na_matches == "never") NA else NULL
-  x[, ".join_id"] <- seq_len(nrow(x))
-  merged <- if (is.null(by)) {
-    by <- intersect(names(x), names(y))
-    join_message(by)
-    merge(
-      x = x, y = y, by = by, suffixes = suffix, incomparables = incomparables, ...
-    )[, union(names(x), names(y)), drop = FALSE]
-  } else if (is.null(names(by))) {
-    merge(x = x, y = y, by = by, suffixes = suffix, incomparables = incomparables, ...)
+  keep <- isTRUE(keep)
+  by <- join_key_names(by, names(x), names(y))
+  keys <- join_keys(x, y, by, mutating = TRUE, never_na = na_matches == "never")
+  rows <- join_rows(keys, type)
+
+  x_names <- names(x)
+  y_names <- names(y)
+  x_data <- as.list(.subset(x))
+  x_data[match(by$x, x_names)] <- keys$x
+  y_data <- as.list(.subset(y))
+  y_data[match(by$y, y_names)] <- keys$y
+  out_x <- lapply(x_data, vec_slice, i = rows$x)
+  if (keep) {
+    out_names <- c(suffix_clashes(x_names, y_names, suffix[1L]), suffix_clashes(y_names, x_names, suffix[2L]))
   } else {
-    merge(x = x, y = y, by.x = names(by), by.y = by, suffixes = suffix, incomparables = incomparables, ...)
+    # Rows found only in `y` take their key values from `y`, and the keys of `y` are dropped
+    y_only <- which(is.na(rows$x))
+    for (i in seq_along(by$x)) {
+      pos <- match(by$x[i], x_names)
+      out_x[[pos]][y_only] <- vec_slice(keys$y[[i]], rows$y[y_only])
+    }
+    is_x_key <- x_names %in% by$x
+    x_out <- x_names
+    x_out[!is_x_key] <- suffix_clashes(x_names[!is_x_key], c(by$x, setdiff(y_names, c(by$x, by$y))), suffix[1L])
+    is_y_key <- y_names %in% by$y
+    out_names <- c(x_out, suffix_clashes(y_names, x_names, suffix[2L])[!is_y_key])
+    y_data <- y_data[!is_y_key]
   }
-  merged <- merged[order(merged[, ".join_id"]), colnames(merged) != ".join_id", drop = FALSE]
-  if (isTRUE(keep)) {
-    keep_pos <- match(by, names(merged))
-    x_by <- paste0(by, suffix[1L])
-    colnames(merged)[keep_pos] <- x_by
-    merged[, paste0(by, suffix[2L])] <- merged[, x_by]
-  }
-  rownames(merged) <- NULL
-  reconstruct_attrs(merged, x)
+  out <- c(out_x, lapply(y_data, vec_slice, i = rows$y))
+  names(out) <- out_names
+  reconstruct_attrs(new_data_frame(out, length(rows$x)), x)
 }
 
-join_message <- function(by) {
-  if (length(by) > 1L) {
-    message("Joining, by = c(\"", paste0(by, collapse = "\", \""), "\")\n", sep = "")
-  } else {
-    message("Joining, by = \"", by, "\"\n", sep = "")
+#' Find the matching rows of a join
+#'
+#' @param keys The keys of the join, as returned by `join_keys()`.
+#' @param type `character(1)`. One of `"inner"`, `"left"`, `"right"` or `"full"`.
+#' @return A `list` with `x` and `y`, the row of `x` and of `y` for each row of the result, which are `NA` where the
+#' row has no match. The rows follow `x`, with the matches of each row in the order of `y`; rows of `y` without a
+#' match come last.
+#' @noRd
+join_rows <- function(keys, type) {
+  x_ids <- keys$x_ids
+  y_ids <- keys$y_ids
+  n_x <- length(x_ids)
+  n_groups <- keys$n
+
+  # Rather than matching row by row, sort `y` by key once: the matches of a key are then a run of `y_sorted`
+  y_counts <- tabulate(y_ids, n_groups)
+  y_sorted <- order(y_ids)
+  y_starts <- cumsum(c(1L, y_counts))[seq_len(n_groups)]
+  n_matches <- y_counts[x_ids]
+  n_matches[is.na(n_matches)] <- 0L
+  n_rows <- if (type %in% c("left", "full")) pmax(n_matches, 1L) else n_matches
+
+  x_rows <- rep.int(seq_len(n_x), n_rows)
+  y_rows <- y_sorted[rep.int(y_starts[x_ids], n_rows) + sequence(n_rows) - 1L]
+  y_rows[rep.int(n_matches == 0L, n_rows)] <- NA_integer_
+  if (type %in% c("right", "full")) {
+    matched <- logical(n_groups)
+    matched[x_ids] <- TRUE
+    unmatched <- which(is.na(y_ids) | !matched[y_ids])
+    x_rows <- c(x_rows, rep(NA_integer_, length(unmatched)))
+    y_rows <- c(y_rows, unmatched)
+  }
+  list(x = x_rows, y = y_rows)
+}
+
+#' Add a suffix to clashing names
+#'
+#' A name clashes when it is one of `avoid` or repeats an earlier name. Clashing names are suffixed, and the check is
+#' repeated, until no name clashes.
+#'
+#' @param names `character(n)`. The names to make unique.
+#' @param avoid `character(n)`. The names which `names` must not use.
+#' @param suffix `character(1)`. The suffix.
+#' @noRd
+suffix_clashes <- function(names, avoid, suffix) {
+  if (!nzchar(suffix)) return(names)
+  repeat {
+    clash <- names %in% avoid | duplicated(names)
+    if (!any(clash)) return(names)
+    names[clash] <- paste0(names[clash], suffix)
   }
 }

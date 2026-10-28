@@ -23,7 +23,7 @@
 #' Within these functions you can use [cur_column()] and [cur_group()] to access the current column and grouping keys
 #' respectively.
 #' @param ... Additional arguments for the function calls in `.fns`.
-#' @param .names A glue specification that describes how to name the output
+#' @param .names A gluestick specification that describes how to name the output
 #'  columns. This can use `{.col}` to stand for the selected column name, and `{.fn}`
 #'  to stand for the name of the function being applied. The default (`NULL`) is
 #'  equivalent to "`{.col}`" for the single function case and "`{.col}_{.fn}`" for
@@ -86,7 +86,11 @@ across <- function(.cols = everything(), .fns = NULL, ..., .names = NULL) {
   }
   cols <- setup$cols
   n_cols <- length(cols)
-  if (n_cols == 0L) return(data.frame())
+  # As in dplyr, no columns still give a data frame with a row for each row of the group, e.g. so that `filter()` keeps
+  # every row
+  if (n_cols == 0L) {
+    return(structure(list(), names = character(), row.names = .set_row_names(context$get_nrow()), class = "data.frame"))
+  }
   funs <- setup$funs
   data <- context$get_columns(cols)
   names <- setup$names
@@ -110,14 +114,15 @@ across <- function(.cols = everything(), .fns = NULL, ..., .names = NULL) {
     }
   }
   if (is.null(names(res))) names(res) <- names
-  as.data.frame(res)
+  across_data_frame(res)
 }
 
 #' @rdname across
 #' @export
 if_any <- function(.cols, .fns = NULL, ..., .names = NULL) {
   df <- do.call(across, list(.cols = substitute(.cols), .fns = .fns, ..., .names = .names))
-  if (nrow(df) == 0L) return(FALSE)
+  # As in dplyr, no columns give TRUE, so `filter()` keeps every row, rather than the FALSE of `any()`
+  if (ncol(df) == 0L) return(TRUE)
   check_if_types(df)
   Reduce(`|`, df)
 }
@@ -126,7 +131,7 @@ if_any <- function(.cols, .fns = NULL, ..., .names = NULL) {
 #' @export
 if_all <- function(.cols, .fns = NULL, ..., .names = NULL) {
   df <- do.call(across, list(.cols = substitute(.cols), .fns = .fns, ..., .names = .names))
-  if (nrow(df) == 0L) return(FALSE)
+  if (ncol(df) == 0L) return(TRUE)
   check_if_types(df)
   Reduce(`&`, df)
 }
@@ -143,6 +148,19 @@ check_if_types <- function(df) {
 }
 
 # -- helpers -----------------------------------------------------------------------------------------------------------
+
+# A faster equivalent of `as.data.frame(x)` for the common case where each result is a plain vector of the same
+# length, with names which `as.data.frame()` would leave unchanged. Anything else falls back to `as.data.frame()`.
+across_data_frame <- function(x) {
+  n <- unique(lengths(x))
+  nms <- names(x)
+  plain <- length(n) == 1L && !is.null(nms) &&
+    all(vapply(x, function(col) is.atomic(col) && is.null(attributes(col)), NA))
+  if (!plain || !identical(make.names(nms, unique = TRUE), nms)) return(as.data.frame(x))
+  attr(x, "row.names") <- .set_row_names(n)
+  class(x) <- "data.frame"
+  x
+}
 
 setup_across <- function(.cols, .fns, .names) {
   cols <- eval_select_pos(.data = context$.data, .cols, .group_pos = FALSE)

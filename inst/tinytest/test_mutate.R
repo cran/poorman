@@ -327,3 +327,416 @@ expect_error(
   df %>% group_by(x) %>% mutate(y = NULL, a = sum(y)),
   info = "setting column to NULL makes it unavailable for grouped df"
 )
+
+# Grouped mutate --------------------------------------------------------------
+
+gf <- data.frame(a = c(2, 1, 2), b = 1:3) %>% group_by(a)
+expect_equal(
+  group_rows(mutate(gf, z = 1)),
+  list(2L, c(1L, 3L)),
+  info = "mutate() keeps the group rows in step with the data"
+)
+expect_equal(
+  group_rows(transmute(gf, z = 1)),
+  list(2L, c(1L, 3L)),
+  info = "transmute() keeps the group rows in step with the data"
+)
+expect_equal(mutate(gf, f = b * 2L)$f, c(2L, 4L, 6L), info = "mutate() on grouped data accepts a column called `f`")
+expect_equal(
+  as.data.frame(ungroup(mutate(gf, .fn = 1, .drop = 2, .reorder = 3))),
+  data.frame(a = c(2, 1, 2), b = 1:3, .fn = 1, .drop = 2, .reorder = 3),
+  info = "mutate() on grouped data accepts columns named like internal arguments"
+)
+
+df <- data.frame(g = c("a", NA, "a", NA), v = 1:4, stringsAsFactors = FALSE)
+expect_equal(
+  ungroup(mutate(group_by(df, g), s = sum(v))),
+  data.frame(g = c("a", NA, "a", NA), v = 1:4, s = c(4L, 6L, 4L, 6L), stringsAsFactors = FALSE),
+  info = "mutate() keeps rows with missing grouping values"
+)
+
+df <- data.frame(g1 = numeric(0), g2 = integer(0), v = integer(0))
+res <- ungroup(mutate(group_by(df, g1, g2), m = mean(v), id = cur_group_id()))
+expect_equal(nrow(res), 0L, info = "mutate() on empty grouped data returns an empty data.frame #1")
+expect_equal(colnames(res), c("g1", "g2", "v", "m", "id"), info = "mutate() on empty grouped data returns an empty data.frame #2")
+
+rm(df, gf, res)
+
+pron <- data.frame(x = 1:4, y = c(2, 4, 6, 8), g = c("a", "a", "b", "b"))
+col <- "y"
+
+expect_equal(
+  mutate(pron, z = .data$y * 2, w = .data[[col]] + x),
+  data.frame(pron, z = c(4, 8, 12, 16), w = c(3, 6, 9, 12)),
+  info = "mutate() supports the .data pronoun"
+)
+
+expect_equal(
+  mutate(pron, x = .data$x * 10L, z = .data$x, w = .data$z + 1L),
+  data.frame(x = c(10L, 20L, 30L, 40L), y = pron$y, g = pron$g, z = c(10L, 20L, 30L, 40L), w = c(11L, 21L, 31L, 41L)),
+  info = "The .data pronoun sees the columns made by earlier expressions in mutate()"
+)
+
+expect_equal(
+  mutate(group_by(pron, g), s = sum(.data[[col]]))$s,
+  c(6, 6, 14, 14),
+  info = "The .data pronoun holds the rows of the current group in mutate()"
+)
+
+expect_equal(
+  transmute(pron, z = .data[[col]] + x),
+  data.frame(z = c(3, 6, 9, 12)),
+  info = "transmute() supports the .data pronoun"
+)
+
+nm_df <- data.frame(x = 1:2, y = c(10, 20))
+expect_equal(
+  names(mutate(nm_df, x + y + x + y + x + y + x + y + x + y + x + y + x + y + x + y + x + y + x)),
+  c("x", "y", "... + x"),
+  info = "mutate() abbreviates long automatic names"
+)
+expect_equal(
+  names(mutate(nm_df, {
+    x * 2
+  })),
+  c("x", "y", "{ ... }"),
+  info = "mutate() names a multi-line expression on one line"
+)
+expect_equal(
+  mutate(nm_df, .data$y * 2, .data$x),
+  data.frame(x = 1:2, y = c(10, 20), `.data$y * 2` = c(20, 40), check.names = FALSE),
+  info = "mutate() names .data$x after the column, which it overwrites"
+)
+expect_equal(
+  names(transmute(nm_df, x + y + x + y + x + y + x + y + x + y + x + y + x + y + x + y + x + y + x)),
+  "... + x",
+  info = "transmute() abbreviates long automatic names"
+)
+
+ce_df <- data.frame(x = 1:3, y = c(2, 4, 6))
+ce_nm <- "tot"
+expect_equal(
+  mutate(ce_df, z := y * 2, "{ce_nm}" := z + x), # nolint: object_name_linter.
+  data.frame(x = 1:3, y = c(2, 4, 6), z = c(4, 8, 12), tot = c(5, 10, 15)),
+  info = "mutate() names := arguments after a symbol or a gluestick template"
+)
+ce_fn <- function(data) {
+  local_nm <- "inner"
+  mutate(group_by(data, x), "{local_nm}" := y * 2) # nolint: object_name_linter.
+}
+expect_equal(
+  names(ce_fn(ce_df)),
+  c("x", "y", "inner"),
+  info = "Gluestick templates are filled in from the calling environment on grouped data"
+)
+
+ds_df <- data.frame(x = 1:3, y = c(2, 4, 6))
+ds_var <- "y"
+expect_equal(
+  names(mutate(ds_df, .data[[ds_var]] * 2)),
+  c("x", "y", ".data[[\"y\"]] * 2"),
+  info = "mutate() names .data[[var]] after the value of var"
+)
+expect_equal(
+  names(transmute(ds_df, .data[[ds_var]], -.data[[ds_var]])),
+  c("y", "-.data[[\"y\"]]"),
+  info = "transmute() names .data[[var]] after the value of var"
+)
+
+ch_df <- data.frame(g = c("b", "a", "b", "c", "a"), x = 1:5)
+ch_res <- ch_df %>% group_by(g) %>% mutate(k = 1) %>% mutate(z = n())
+expect_equal(
+  ungroup(ch_res),
+  data.frame(g = c("b", "a", "b", "c", "a"), x = 1:5, k = 1, z = c(2L, 2L, 2L, 1L, 2L)),
+  info = "The result of a grouped mutate() can be passed to another grouped verb"
+)
+expect_equal(group_rows(ch_res), list(c(2L, 5L), c(1L, 3L), 4L), info = "Chained grouped mutate() keeps the groups")
+
+eg_df <- data.frame(g = factor(c("a", "a"), levels = c("a", "b")), x = 1:2)
+eg_seen <- character()
+eg_res <- mutate(group_by(eg_df, g, .drop = FALSE), k = {
+  eg_seen <<- c(eg_seen, paste0(cur_group_id(), ":", n()))
+  1
+})
+expect_equal(eg_seen, c("1:2", "2:0"), info = "Grouped mutate() evaluates its expressions for empty groups too")
+expect_equal(ungroup(eg_res), data.frame(eg_df, k = 1), info = "Results for empty groups add no rows to mutate()")
+
+se_df <- data.frame(g1 = c("a", "a", "b", "b", "b"), g2 = c(1, 1, 2, 2, 2), x = 1:5)
+expect_error(
+  mutate(group_by(se_df, g1, g2), k = 1:2),
+  paste0(
+    "Problem while computing `k = 1:2`.\nx `k` must be size 3 or 1, not 2.\n",
+    "i The error occurred in group 2: g1 = \"b\", g2 = 2."
+  ),
+  fixed = TRUE,
+  info = "Grouped mutate() gives an error naming the group when a result has the wrong size"
+)
+expect_error(
+  mutate(group_by(se_df, g1), 1:2),
+  paste0(
+    "Problem while computing `..1 = 1:2`.\nx `..1` must be size 3 or 1, not 2.\n",
+    "i The error occurred in group 2: g1 = \"b\"."
+  ),
+  fixed = TRUE,
+  info = "The size error of mutate() calls an unnamed expression by its position"
+)
+expect_error(
+  mutate(se_df, k = 1:2),
+  "Problem while computing `k = 1:2`.\nx `k` must be size 5 or 1, not 2.",
+  fixed = TRUE,
+  info = "Ungrouped mutate() gives an error when a result has the wrong size"
+)
+expect_error(
+  mutate(data.frame(x = 1), y = 1:2),
+  "Problem while computing `y = 1:2`.\nx `y` must be size 1, not 2.",
+  fixed = TRUE,
+  info = "The size error of mutate() on data with one row gives the size once"
+)
+expect_error(
+  transmute(data.frame(x = 1), 1:2),
+  "Problem while computing `..1 = 1:2`.\nx `..1` must be size 1, not 2.",
+  fixed = TRUE,
+  info = "The size error of transmute() on data with one row gives the size once"
+)
+expect_error(
+  mutate(group_by(se_df, g1, g2), k = if (g1[1L] == "a") 1:3 else 1L),
+  paste0(
+    "Problem while computing `k = if (g1[1L] == \"a\") 1:3 else 1L`.\nx `k` must be size 2 or 1, not 3.\n",
+    "i The error occurred in group 1: g1 = \"a\", g2 = 1."
+  ),
+  fixed = TRUE,
+  info = "The size error of grouped mutate() gives the size of the group"
+)
+expect_error(
+  transmute(group_by(data.frame(g = c(1, 2, 2), x = 1:3), g), y = 1:2),
+  "Problem while computing `y = 1:2`.\nx `y` must be size 1, not 2.\ni The error occurred in group 1: g = 1.",
+  fixed = TRUE,
+  info = "The size error of grouped transmute() gives the size once for a group with one row"
+)
+
+nv_df <- data.frame(g = c("b", "a", "b", "c", "a"), x = 1:5)
+expect_equal(
+  ungroup(mutate(group_by(nv_df, g), k = nrow(filter(nv_df, x > 2)) + n())),
+  data.frame(nv_df, k = c(5L, 5L, 5L, 4L, 5L)),
+  info = "A verb can be used inside an expression of a grouped mutate()"
+)
+nv_fn <- function(data) {
+  order <- 10
+  vals <- 100
+  mask <- 1000
+  mutate(group_by(data, g), y = x + order + vals + mask)
+}
+expect_equal(
+  nv_fn(nv_df)$y,
+  1:5 + 1110,
+  info = "Grouped mutate() finds local variables, even with the names of its own variables"
+)
+nv_rn <- data.frame(g = c("b", "a", "b"), x = c(1, 2, 3), row.names = c("r1", "r2", "r3"))
+expect_equal(
+  ungroup(mutate(group_by(nv_rn, g), m = mean(x))),
+  data.frame(g = c("b", "a", "b"), x = c(1, 2, 3), m = c(2, 2, 2), row.names = c("r1", "r2", "r3")),
+  info = "Grouped mutate() keeps the order and the names of the rows"
+)
+
+# A package can build on poorman with methods for its own class which call NextMethod()
+mutate.poorman_ext <- function(.data, ...) { # nolint: object_name_linter.
+  res <- NextMethod()
+  attr(res, "ext") <- "kept"
+  res
+}
+registerS3method("mutate", "poorman_ext", mutate.poorman_ext, envir = asNamespace("poorman"))
+ext_df <- group_by(data.frame(g = c("b", "a", "b"), x = 1:3), g)
+class(ext_df) <- c("poorman_ext", class(ext_df))
+ext_fn <- function(data) {
+  k <- 100
+  mutate(data, y = x + k, n = n())
+}
+ext_res <- ext_fn(ext_df)
+expect_equal(
+  class(ext_res),
+  c("poorman_ext", "grouped_df", "data.frame"),
+  info = "Grouped mutate() keeps the class of an extension"
+)
+expect_equal(attr(ext_res, "ext"), "kept", info = "The method of an extension class is used by mutate()")
+expect_equal(ext_res$y, c(101, 102, 103), info = "mutate() called through NextMethod() finds local variables")
+expect_equal(ext_res$n, c(2L, 1L, 2L), info = "mutate() called through NextMethod() respects the groups")
+
+# Each group has its own variables: an assignment in one group is not seen by the next (dplyr 1.0.10 leaks it)
+df <- data.frame(g = c("a", "b", "a", "c", "b"), x = 1:5)
+expect_equal(
+  mutate(group_by(df, g), k = { if (!exists("cnt", inherits = FALSE)) cnt <- 0; cnt <- cnt + 1; cnt })$k, rep(1, 5),
+  info = "grouped mutate() does not share assignments between groups"
+)
+expect_equal(
+  mutate(group_by(df, g), a = { tmp <- 1; 1 }, b = exists("tmp", inherits = FALSE))$b, rep(TRUE, 5),
+  info = "grouped mutate() shares assignments with the later expressions of the same group"
+)
+expect_equal(
+  filter(group_by(df, g), { if (!exists("cnt", inherits = FALSE)) cnt <- 0; cnt <- cnt + 1; cnt < 2 })$x, 1:5,
+  info = "grouped filter() does not share assignments between groups"
+)
+rm(df)
+
+# Results of incompatible types across groups
+it_df <- group_by(data.frame(g = c(1, 2, 3, 3), x = 1:4), g)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) "a" else 2.5),
+  paste0(
+    "Problem while computing `y = if (g[1L] == 1) \"a\" else 2.5`.\nCaused by error:\n",
+    "! `y` must return compatible vectors across groups.\n",
+    "i Result type for group 1 (g = 1): <character>.\ni Result type for group 2 (g = 2): <double>."
+  ),
+  fixed = TRUE,
+  info = "mutate() gives an error for results of incompatible types across groups"
+)
+expect_error(
+  transmute(it_df, if (g[1L] == 3) "a" else 2.5),
+  paste0(
+    "Problem while computing `..1 = if (g[1L] == 3) \"a\" else 2.5`.\nCaused by error:\n",
+    "! `if (g[1L] == 3) \"a\" else 2.5` must return compatible vectors across groups.\n",
+    "i Result type for group 1 (g = 1): <double>.\ni Result type for group 3 (g = 3): <character>."
+  ),
+  fixed = TRUE,
+  info = "The type error of transmute() calls an unnamed expression by its position"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) 1L else if (g[1L] == 2) 2.5 else "a"),
+  "i Result type for group 2 (g = 2): <double>.\ni Result type for group 3 (g = 3): <character>.",
+  fixed = TRUE,
+  info = "The type error names the group which raised the type of the earlier results"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) NA else if (g[1L] == 2) 2.5 else "a"),
+  "i Result type for group 1 (g = 1): <double>.\ni Result type for group 3 (g = 3): <character>.",
+  fixed = TRUE,
+  info = "A logical NA in the first group takes the type of the result that follows it"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) as.Date("2020-01-01") else 2.5),
+  "i Result type for group 1 (g = 1): <date>.\ni Result type for group 2 (g = 2): <double>.",
+  fixed = TRUE,
+  info = "mutate() cannot combine a Date with a double"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) list(1) else 2L),
+  "i Result type for group 1 (g = 1): <list>.\ni Result type for group 2 (g = 2): <integer>.",
+  fixed = TRUE,
+  info = "mutate() cannot combine a list with an integer"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) as.POSIXct("2020-01-01", tz = "UTC") else 2L),
+  "i Result type for group 1 (g = 1): <datetime<UTC>>.\ni Result type for group 2 (g = 2): <integer>.",
+  fixed = TRUE,
+  info = "The type error names a POSIXct result by its time zone"
+)
+expect_error(
+  mutate(group_by(data.frame(g = c("x", "y"), h = 1:2), g, h), y = if (g == "x") "a" else 2.5),
+  "i Result type for group 1 (g = \"x\", h = 1): <character>.\ni Result type for group 2 (g = \"y\", h = 2): <double>.",
+  fixed = TRUE,
+  info = "The type error describes each group by all of its keys"
+)
+expect_equal(
+  ungroup(mutate(it_df, y = if (g[1L] == 1) 1L else 2.5))$y, c(1, 2.5, 2.5, 2.5),
+  info = "mutate() combines integer and double results to a double"
+)
+expect_identical(
+  ungroup(mutate(it_df, y = if (g[1L] == 1) TRUE else 2L))$y, c(1L, 2L, 2L, 2L),
+  info = "mutate() combines logical and integer results to an integer"
+)
+expect_identical(
+  ungroup(mutate(it_df, y = if (g[1L] == 1) factor("a") else "b"))$y, c("a", "b", "b", "b"),
+  info = "mutate() combines factor and character results to a character"
+)
+expect_identical(
+  ungroup(mutate(it_df, y = factor(if (g[1L] == 1) "a" else "b")))$y, factor(c("a", "b", "b", "b")),
+  info = "mutate() combines factors with different levels to a factor"
+)
+expect_identical(
+  ungroup(mutate(it_df, y = if (g[1L] == 1) "a" else NA))$y, c("a", NA, NA, NA),
+  info = "mutate() combines a logical NA with a character"
+)
+
+# Matrix results across groups
+mt_df <- group_by(data.frame(g = c(1, 2, 2)), g)
+expect_equal(
+  unname(ungroup(mutate(mt_df, y = if (g[1L] == 1) matrix(1:2, 1L) else 2.5))$y),
+  matrix(c(1, 2.5, 2.5, 2, 2.5, 2.5), 3L),
+  info = "mutate() combines a matrix with a number, which fills the rows of its group"
+)
+expect_equal(
+  unname(ungroup(mutate(mt_df, y = if (g[1L] == 1) matrix(1:2, 1L) else c(3, 4)))$y),
+  matrix(c(1, 3, 4, 2, 3, 4), 3L),
+  info = "mutate() combines a matrix with a vector, each element filling a row"
+)
+expect_equal(
+  unname(ungroup(mutate(mt_df, y = if (g[1L] == 1) matrix(c("a", "b"), 1L) else "c"))$y),
+  matrix(c("a", "c", "c", "b", "c", "c"), 3L),
+  info = "mutate() combines a character matrix with a character"
+)
+expect_error(
+  mutate(mt_df, y = if (g[1L] == 1) matrix(1:2, 1L) else "a"),
+  "i Result type for group 1 (g = 1): <integer[,2]>.\ni Result type for group 2 (g = 2): <character>.",
+  fixed = TRUE,
+  info = "mutate() cannot combine a numeric matrix with a character"
+)
+expect_error(
+  mutate(mt_df, y = if (g[1L] == 1) as.difftime(1, units = "secs") else "a"),
+  "i Result type for group 1 (g = 1): <duration<secs>>.\ni Result type for group 2 (g = 2): <character>.",
+  fixed = TRUE,
+  info = "The type error of mutate() names a difftime as a duration with its units"
+)
+
+# Dates and datetimes across groups
+dt_df <- group_by(data.frame(g = c(1, 2, 2)), g)
+dt_ny <- as.POSIXct("2021-03-04 15:45:00", tz = "America/New_York")
+expect_identical(
+  ungroup(mutate(dt_df, y = if (g[1L] == 1) as.Date("2021-03-05") else dt_ny))$y,
+  structure(c(1614920400, 1614890700, 1614890700), class = c("POSIXct", "POSIXt"), tzone = "America/New_York"),
+  info = "mutate() combines a Date and a POSIXct to a POSIXct, the Date at midnight in its time zone"
+)
+expect_identical(
+  ungroup(mutate(dt_df, y = if (g[1L] == 1) dt_ny else as.Date("2021-03-05")))$y,
+  structure(c(1614890700, 1614920400, 1614920400), class = c("POSIXct", "POSIXt"), tzone = "America/New_York"),
+  info = "mutate() combines a POSIXct and a Date to a POSIXct"
+)
+expect_identical(
+  ungroup(mutate(dt_df, y = if (g[1L] == 1) NA else as.POSIXct("2021-03-04 15:45:00", tz = "UTC")))$y,
+  structure(c(NA, 1614872700, 1614872700), class = c("POSIXct", "POSIXt"), tzone = "UTC"),
+  info = "mutate() combines a logical NA and a POSIXct to a POSIXct"
+)
+expect_identical(
+  attr(ungroup(mutate(dt_df, y = if (g[1L] == 1) .POSIXct(0) else dt_ny))$y, "tzone"),
+  "America/New_York",
+  info = "Combined datetimes take the first time zone which is set"
+)
+expect_identical(
+  attr(ungroup(mutate(dt_df, y = if (g[1L] == 1) as.Date("2021-03-05") else .POSIXct(0)))$y, "tzone"),
+  "",
+  info = "Combined datetimes take the local time zone if none is set"
+)
+
+# NULL results in only some groups
+expect_error(
+  mutate(dt_df, y = if (g[1L] == 2) NULL else 1),
+  paste0(
+    "Problem while computing `y = if (g[1L] == 2) NULL else 1`.\n",
+    "x `y` must return compatible vectors across groups.\nx Can't combine NULL and non NULL results."
+  ),
+  fixed = TRUE,
+  info = "mutate() gives an error for NULL results in only some groups"
+)
+expect_error(
+  transmute(dt_df, if (g[1L] == 1) NULL else 1),
+  paste0(
+    "Problem while computing `..1 = if (g[1L] == 1) NULL else 1`.\n",
+    "x `..1` must return compatible vectors across groups.\nx Can't combine NULL and non NULL results."
+  ),
+  fixed = TRUE,
+  info = "The NULL error of transmute() calls an unnamed expression by its position"
+)
+expect_error(
+  mutate(it_df, y = if (g[1L] == 1) "a" else if (g[1L] == 2) 1 else NULL),
+  "x Can't combine NULL and non NULL results.",
+  fixed = TRUE,
+  info = "The NULL error of mutate() comes before the error for incompatible types"
+)

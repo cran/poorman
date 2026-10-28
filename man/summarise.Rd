@@ -12,7 +12,11 @@ summarize(.data, ..., .groups = NULL)
 \arguments{
 \item{.data}{A \code{data.frame}.}
 
-\item{...}{Name-value pairs of summary functions. The name will be the name of the variable in the result.}
+\item{...}{Name-value pairs of summary functions. The name will be the name of the variable in the result.
+
+A name can also be given with \verb{:=}, e.g. \code{total := sum(x)}. A string on the left of \verb{:=} is a \code{gluestick} template
+which is filled in from the calling environment, so that a name can be built from a variable, e.g.
+\code{"{var}_mean" := mean(x)}.}
 
 \item{.groups}{\code{character(1)}. Grouping structure of the result.
 \itemize{
@@ -43,6 +47,45 @@ result in one row in the output for each group.
 \details{
 \code{summarise()} and \code{summarize()} are synonyms.
 }
+\section{Automatic names}{
+
+An unnamed expression is named after its code, e.g. \code{mean(disp)}, and \code{.data$disp} is named \code{disp}. When the code
+is too long to read as a name, it is abbreviated with \code{...}. A call keeps its function, e.g. \code{mean(...)}, and an
+operator keeps as many of its two sides as fit in 60 characters, e.g. \code{... \%>\% select(a, b)}.
+
+The names are those of \code{dplyr}, with these differences:
+\itemize{
+\item The limit of 60 characters is fixed. \code{dplyr} keeps some names of up to 63 characters whose right side is a call,
+such as a long name followed by \code{+ g()}.
+\item Characters are counted rather than bytes, so names with accented or other multibyte characters are not
+abbreviated sooner.
+\item \verb{?} and \verb{:=} are treated as calls rather than operators, e.g. \code{`?`(...)}, as R prints them.
+}
+}
+
+\section{Variables made inside expressions}{
+
+A variable assigned inside an expression, e.g. \code{{ tmp <- x * 2; tmp + 1 }}, can be used by the later expressions of
+the same call. On grouped data, each group has its own variables, so a variable assigned while evaluating one group
+is never seen by the next group. This differs from \code{dplyr} 1.0.10, where such a variable can leak into the groups
+evaluated after it.
+}
+
+\section{Results of incompatible types across groups}{
+
+On grouped data, the results of an expression for each group are combined into one column. When two results have
+incompatible types, e.g. a character in one group and a double in another, there is an error which names the type
+of the results before the incompatible one and the type of the incompatible one, as in \code{dplyr} 1.0.10, with these
+differences:
+\itemize{
+\item A factor is named \verb{<factor>} and a data frame \verb{<data.frame>}. \code{dplyr} adds a hash of the levels of a factor and the
+types of the columns of a data frame, e.g. \verb{<data.frame< a: double b: character >>}.
+\item When factors and character vectors come before the incompatible result, the group named for the results before it
+can differ. For example, with a factor, \code{"b"} and \code{1} as the results of groups 1 to 3, \code{dplyr} names group 1 as
+\verb{<character>} and \code{poorman} names group 2.
+}
+}
+
 \examples{
 # A summary applied to ungrouped tbl returns a single row
 mtcars \%>\%

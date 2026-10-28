@@ -1,7 +1,16 @@
 context <- new.env()
 
 # Data
-context$setup <- function(.data) context$.data <- .data
+# A verb sets the data of the context with `setup()` and removes it with `clean()` when it exits. The data and column of
+# any outer verb are kept and restored by `clean()`, so that a verb can be used inside the expressions of another.
+context$setup <- function(.data) {
+  context$outer <- list(
+    data = get0(".data", envir = context, inherits = FALSE),
+    cur_column = context$cur_column,
+    outer = context$outer
+  )
+  context$.data <- .data
+}
 context$get_data <- function() context$.data
 context$get_columns <- function(cols) context$.data[, cols, drop = FALSE]
 context$cur_column <- NULL
@@ -15,10 +24,11 @@ context$as_env <- function() {
     context$.data
   }
 }
-context$group_env <- NULL
 context$clean <- function() {
-  rm(list = c(".data"), envir = context)
-  if (!is.null(context$cur_column)) rm(list = c("cur_column"), envir = context)
+  outer <- context$outer
+  context$outer <- outer$outer
+  if (is.null(outer$data)) rm(list = ".data", envir = context) else context$.data <- outer$data
+  context$cur_column <- outer$cur_column
 }
 
 #' Context dependent expressions
@@ -76,7 +86,9 @@ n <- function() {
 cur_data <- function() {
   check_context("`cur_data()`", context$.data)
   data <- context$get_data()
-  data[, !(colnames(data) %in% group_vars(data)), drop = FALSE]
+  res <- data[, !(colnames(data) %in% group_vars(data)), drop = FALSE]
+  attr(res, "group_id") <- NULL
+  res
 }
 
 #' @description
@@ -85,7 +97,9 @@ cur_data <- function() {
 #' @export
 cur_data_all <- function() {
   check_context("`cur_data_all()`", context$.data)
-  ungroup(context$get_data())
+  res <- ungroup(context$get_data())
+  attr(res, "group_id") <- NULL
+  res
 }
 
 #' @description
@@ -96,7 +110,13 @@ cur_data_all <- function() {
 cur_group <- function() {
   check_context("`cur_group()`", context$.data)
   data <- context$get_data()
-  res <- data[1L, group_vars(data), drop = FALSE]
+  id <- attr(data, "group_id", exact = TRUE)
+  # An empty group has no rows to take the keys from
+  res <- if (!is.null(id) && !is.na(id)) {
+    get_group_details(data)[id, group_vars(data), drop = FALSE]
+  } else {
+    data[1L, group_vars(data), drop = FALSE]
+  }
   rownames(res) <- NULL
   res
 }
@@ -108,6 +128,9 @@ cur_group <- function() {
 cur_group_id <- function() {
   check_context("`cur_group_id()`", context$.data)
   data <- context$get_data()
+  if (!has_groups(data)) return(1L)
+  id <- attr(data, "group_id", exact = TRUE)
+  if (!is.null(id) && !is.na(id)) return(id)
   res <- data[1L, group_vars(data), drop = FALSE]
   details <- get_group_details(data)
   details[, ".group_id"] <- seq_len(nrow(details))
@@ -122,6 +145,9 @@ cur_group_id <- function() {
 cur_group_rows <- function() {
   check_context("`cur_group_rows()`", context$.data)
   data <- context$get_data()
+  if (!has_groups(data)) return(seq_len(nrow(data)))
+  id <- attr(data, "group_id", exact = TRUE)
+  if (!is.null(id) && !is.na(id)) return(get_group_details(data)[[".rows"]][[id]])
   res <- data[1L, group_vars(data), drop = FALSE]
   res <- suppressMessages(semi_join(get_group_details(data), res))
   unlist(res[, ".rows"])

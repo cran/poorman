@@ -20,14 +20,18 @@ add_tally(x, wt = NULL, sort = FALSE, name = NULL)
 
 \item{...}{Variables to group by.}
 
-\item{wt}{If omitted, will count the number of rows. If specified, will perform a "weighted" count by summing the
-(non-missing) values of variable \code{wt}. If omitted, and column \code{n} exists, it will automatically be used as a
-weighting variable, although you will have to specify \code{name} to provide a new name for the output.}
+\item{wt}{Frequency weights. If \code{NULL}, the default, the rows of each group are counted. Otherwise, the weighted
+count of each group is the sum of the (non-missing) values of \code{wt}, which may be a column or an expression of
+columns and variables of the calling environment, e.g. \code{wt = price * k}. A column named \code{n} is not used as a
+weight unless it is given as \code{wt}.}
 
 \item{sort}{\code{logical(1)}. If \code{TRUE}, will show the largest groups at the top.}
 
-\item{name}{\code{character(1)}. The name of the new column in the output. If omitted, it will default to \code{n}. If there's
-already a column called \code{n}, it will error, and require you to specify the name.}
+\item{name}{\code{character(1)}. The name of the new column in the output. If omitted, it will default to \code{n}. If \code{n}
+would clash with a column that the output keeps, i.e. a grouping variable for \code{count()} and \code{tally()} or any column
+of the input for \code{add_count()} and \code{add_tally()}, \code{n} is repeated until the name is unique (\code{nn}, \code{nnn}, ...) and a
+message gives the name used. A column \code{n} that is not kept, e.g. a column summarised away by \code{count()}, does not
+clash, and the count is stored in \code{n}. An explicit \code{name} is used as given and replaces any column of that name.}
 }
 \value{
 A \code{data.frame}. \code{count()} and \code{add_count()} have the same groups as the input.
